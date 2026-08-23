@@ -1,0 +1,29 @@
+# --- Build de PlatformIO ---
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# --- Copia local de LVGL 9.5.0 (99 MB de codigo de terceros) ---
+# Se recrea con:  python tools/setup_lvgl.py
+# El library.json parcheado que necesita SI esta versionado, en
+# vendor/lvgl9-library.json, y el script lo copia en su sitio.
+vendor/lvgl9/
+
+# --- Salida de tools/gen_assets.py --preview (se regenera) ---
+preview/
+
+# --- VS Code: solo se versiona extensions.json ---
+.vscode/*
+!.vscode/extensions.json
+.vscode/.browse.c_cpp.db*
+.vscode/ipch/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+
+# --- Varios ---
+*.log
+Thumbs.db
+desktop.ini
