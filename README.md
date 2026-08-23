@@ -3,6 +3,11 @@
 Reloj de tarjetas abatibles (*flip clock*) tipo Twemco, en 480x320 apaisado, con
 hora por NTP y ajuste manual táctil.
 
+![El reloj en marcha](docs/scene.png)
+
+*La escena tal y como sale del generador de sprites: es exactamente lo que se
+embebe en la placa, pixel por pixel.*
+
 Hardware: **Elecrow 3.5" ESP32-S3 Display**, panel ST77922 de 320x480 con táctil
 capacitivo, 16 MB de flash y PSRAM octal. Firmware sobre **LVGL 9.5.0** y
 Arduino-ESP32 3.2.1 (IDF 5.4.2), compilado con **PlatformIO**.
@@ -91,6 +96,11 @@ Cualquier otro obligaría a convertir en cada frame — y si algún día se ve u
 tinte amarillo/magenta en pantalla, es exactamente este desajuste.
 
 ## Cómo funciona el volteo
+
+<img src="docs/flip.png" alt="Tres instantes de un volteo" width="320">
+
+*Tres instantes del volteo: la hoja alta plegándose, el reposo y la hoja baja
+aterrizando sobre el valor nuevo.*
 
 En `flip_card.c`, **sin guardar un solo fotograma de animación**:
 

@@ -11,6 +11,7 @@ vendor/lvgl9/
 
 # --- Salida de tools/gen_assets.py --preview (se regenera) ---
 preview/
+# (las dos imagenes del README viven en docs/ y esas si se versionan)
 
 # --- VS Code: solo se versiona extensions.json ---
 .vscode/*
