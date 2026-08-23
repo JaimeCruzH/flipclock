@@ -97,11 +97,11 @@ tinte amarillo/magenta en pantalla, es exactamente este desajuste.
 
 ## Cómo funciona el volteo
 
-<img src="docs/flip.png" alt="Tres instantes del volteo de los minutos" width="320">
+![El volteo de los minutos, 02:57 a 02:58](docs/flip.gif)
 
-*Tres instantes del volteo de los minutos, 02:58 → 02:59: la hoja alta
-plegándose, el reposo y la hoja baja aterrizando sobre el valor nuevo. La
-tarjeta de las horas no se mueve.*
+*El volteo de un minuto a velocidad real: son los mismos seis ángulos y los
+mismos ~80 ms por fotograma que dibuja la placa. La tarjeta de las horas no se
+mueve; el minuto pasa de 57 a 58.*
 
 En `flip_card.c`, **sin guardar un solo fotograma de animación**:
 

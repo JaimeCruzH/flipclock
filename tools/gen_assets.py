@@ -23,6 +23,7 @@ Por eso cada digito se genera 4 veces, una por columna de la escena.
 
 import argparse
 import os
+import math
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -454,8 +455,19 @@ def compose_scene(hh, mm, date_text="SAB 22 AGO"):
     return scene
 
 
-def compose_mid_flip(old_val, new_val, still_val, t, idx=1):
-    """Fotograma simulado de un volteo, t en 0..1.
+# Las seis posiciones que dibuja flip_card.c en la placa. El angulo va de 0
+# (hoja levantada, valor viejo) a 180 (caida, valor nuevo) y se reparte por
+# igual, que es lo que el ojo lee como progreso; ver el README.
+FLIP_ANGLES = (25.0, 51.0, 82.0, 109.0, 142.0, 180.0)
+
+
+def compose_flip_angle(old_val, new_val, still_val, theta, idx=1):
+    """Fotograma del volteo para un angulo de hoja dado, en grados 0..180.
+
+    Reproduce lo que hace flip_card.c: hay una sola variable, el angulo, y la
+    altura aparente de la hoja es |cos theta|. Por debajo de 90 se pliega la
+    hoja alta vieja (pivote abajo); por encima se despliega la baja nueva
+    (pivote arriba). theta=0 y theta=180 son los dos reposos.
 
     idx es la tarjeta que vuela: 1 = minutos (el caso normal, una vez por
     minuto), 0 = horas. La otra tarjeta se dibuja quieta con still_val.
@@ -470,22 +482,49 @@ def compose_mid_flip(old_val, new_val, still_val, t, idx=1):
     scene.paste(new.crop((0, 0, W, half)), (x, y))          # fondo: mitad alta nueva
     scene.paste(old.crop((0, half, W, H)), (x, y + half))   # fondo: mitad baja vieja
 
-    if t < 0.5:
-        k = 1.0 - t / 0.5
-        leaf = old.crop((0, 0, W, half))
-    else:
-        k = (t - 0.5) / 0.5
-        leaf = new.crop((0, half, W, H))
+    falling = theta < 90.0
+    k = abs(math.cos(math.radians(theta)))
+    leaf = old.crop((0, 0, W, half)) if falling else new.crop((0, half, W, H))
     shade_amt = 190 * (1 - k)
 
-    lh = max(1, int(half * k))
+    lh = max(1, int(round(half * k)))
     leaf = leaf.resize((W, lh), Image.BILINEAR)
     leaf = Image.blend(leaf, Image.new("RGB", leaf.size, (0, 0, 0)), shade_amt / 255.0)
-    scene.paste(leaf, (x, y + half - lh) if t < 0.5 else (x, y + half))
+    scene.paste(leaf, (x, y + half - lh) if falling else (x, y + half))
 
     scene.paste(card_image(still_val, 1 - idx), (x_still, y))
     draw_hooks(scene)
     return scene
+
+
+def compose_mid_flip(old_val, new_val, still_val, t, idx=1):
+    """Igual, pero con el avance normalizado t en 0..1 en vez del angulo."""
+    return compose_flip_angle(old_val, new_val, still_val, 180.0 * t, idx)
+
+
+def write_flip_gif(old_val, new_val, still_val, path, idx=1, scale=0.75):
+    """GIF del volteo completo: reposo, las seis posiciones y reposo otra vez.
+
+    Son los mismos angulos y los mismos ~80 ms por fotograma que en la placa,
+    asi que el GIF va a la velocidad real del reloj, no a una inventada.
+    """
+    frames = [compose_flip_angle(old_val, new_val, still_val, 0.0, idx)]
+    frames += [compose_flip_angle(old_val, new_val, still_val, a, idx)
+               for a in FLIP_ANGLES]
+    # el ultimo angulo (180) ya es el reposo nuevo, no hace falta repetirlo
+    durations = [1400] + [80] * (len(FLIP_ANGLES) - 1) + [1400]
+
+    if scale != 1.0:
+        size = (int(GEOM["SCR_W"] * scale), int(GEOM["SCR_H"] * scale))
+        frames = [f.resize(size, Image.LANCZOS) for f in frames]
+
+    # paleta comun: el fondo es casi todo grises, y una paleta por fotograma
+    # haria que el marco parpadease entre cuadros
+    pal = frames[0].quantize(colors=128, method=Image.MEDIANCUT)
+    frames = [f.quantize(palette=pal, dither=Image.FLOYDSTEINBERG) for f in frames]
+
+    frames[0].save(path, save_all=True, append_images=frames[1:],
+                   duration=durations, loop=0, optimize=True, disposal=1)
 
 
 # ---------------------------------------------------------------- salidas
@@ -511,12 +550,15 @@ def do_preview():
     scene.resize((GEOM["SCR_W"] * 2, GEOM["SCR_H"] * 2), Image.LANCZOS) \
          .save(os.path.join(PREVIEW_DIR, "scene_2x.png"))
 
-    # el volteo de cada minuto: 02:58 -> 02:59, con la hora quieta
-    frames = [compose_mid_flip(58, 59, 2, t, idx=1) for t in (0.28, 0.5, 0.78)]
+    # el volteo de cada minuto, 02:57 -> 02:58, con la hora quieta: primero la
+    # tira de tres instantes y luego el GIF con la animacion entera.
+    frames = [compose_mid_flip(57, 58, 2, t, idx=1) for t in (0.28, 0.5, 0.78)]
     sheet = Image.new("RGB", (GEOM["SCR_W"], GEOM["SCR_H"] * 3 + 16), (0, 0, 0))
     for i, fr in enumerate(frames):
         sheet.paste(fr, (0, i * (GEOM["SCR_H"] + 8)))
     sheet.save(os.path.join(PREVIEW_DIR, "mid_flip.png"))
+
+    write_flip_gif(57, 58, 2, os.path.join(PREVIEW_DIR, "flip.gif"))
 
     print("fuente: %s (%s)" % (FONT_INFO.get("name"), FONT_INFO.get("variation")))
     print("preview escrito en %s" % PREVIEW_DIR)
