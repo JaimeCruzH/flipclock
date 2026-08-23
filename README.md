@@ -97,10 +97,11 @@ tinte amarillo/magenta en pantalla, es exactamente este desajuste.
 
 ## Cómo funciona el volteo
 
-<img src="docs/flip.png" alt="Tres instantes de un volteo" width="320">
+<img src="docs/flip.png" alt="Tres instantes del volteo de los minutos" width="320">
 
-*Tres instantes del volteo: la hoja alta plegándose, el reposo y la hoja baja
-aterrizando sobre el valor nuevo.*
+*Tres instantes del volteo de los minutos, 02:58 → 02:59: la hoja alta
+plegándose, el reposo y la hoja baja aterrizando sobre el valor nuevo. La
+tarjeta de las horas no se mueve.*
 
 En `flip_card.c`, **sin guardar un solo fotograma de animación**:
 

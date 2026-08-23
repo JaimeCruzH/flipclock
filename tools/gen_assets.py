@@ -454,12 +454,18 @@ def compose_scene(hh, mm, date_text="SAB 22 AGO"):
     return scene
 
 
-def compose_mid_flip(hh_old, hh_new, mm, t):
-    """Fotograma simulado del volteo de la tarjeta de horas, t en 0..1."""
+def compose_mid_flip(old_val, new_val, still_val, t, idx=1):
+    """Fotograma simulado de un volteo, t en 0..1.
+
+    idx es la tarjeta que vuela: 1 = minutos (el caso normal, una vez por
+    minuto), 0 = horas. La otra tarjeta se dibuja quieta con still_val.
+    """
     scene = render_case()
-    old, new = card_image(hh_old, 0), card_image(hh_new, 0)
+    old, new = card_image(old_val, idx), card_image(new_val, idx)
     W, H, half = GEOM["CARD_W"], GEOM["CARD_H"], GEOM["HALF_H"]
-    x, y = GEOM["WIN_X"], GEOM["WIN_Y"]
+    y = GEOM["WIN_Y"]
+    x = GEOM["WIN_X"] + idx * (W + GEOM["GAP"])
+    x_still = GEOM["WIN_X"] + (1 - idx) * (W + GEOM["GAP"])
 
     scene.paste(new.crop((0, 0, W, half)), (x, y))          # fondo: mitad alta nueva
     scene.paste(old.crop((0, half, W, H)), (x, y + half))   # fondo: mitad baja vieja
@@ -477,7 +483,7 @@ def compose_mid_flip(hh_old, hh_new, mm, t):
     leaf = Image.blend(leaf, Image.new("RGB", leaf.size, (0, 0, 0)), shade_amt / 255.0)
     scene.paste(leaf, (x, y + half - lh) if t < 0.5 else (x, y + half))
 
-    scene.paste(card_image(mm, 1), (x + W + GEOM["GAP"], y))
+    scene.paste(card_image(still_val, 1 - idx), (x_still, y))
     draw_hooks(scene)
     return scene
 
@@ -505,7 +511,8 @@ def do_preview():
     scene.resize((GEOM["SCR_W"] * 2, GEOM["SCR_H"] * 2), Image.LANCZOS) \
          .save(os.path.join(PREVIEW_DIR, "scene_2x.png"))
 
-    frames = [compose_mid_flip(2, 3, 59, t) for t in (0.28, 0.5, 0.78)]
+    # el volteo de cada minuto: 02:58 -> 02:59, con la hora quieta
+    frames = [compose_mid_flip(58, 59, 2, t, idx=1) for t in (0.28, 0.5, 0.78)]
     sheet = Image.new("RGB", (GEOM["SCR_W"], GEOM["SCR_H"] * 3 + 16), (0, 0, 0))
     for i, fr in enumerate(frames):
         sheet.paste(fr, (0, i * (GEOM["SCR_H"] + 8)))
