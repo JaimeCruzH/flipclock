@@ -60,7 +60,7 @@ static void full_refresh_cb(lv_timer_t *timer)
 static void long_press_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
-    settings_ui_open();
+    settings_ui_open(SETTINGS_FROM_CLOCK);
 }
 
 /* Deslizar a la izquierda saca el tiempo. */

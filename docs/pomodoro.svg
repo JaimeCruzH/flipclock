@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320" role="img" aria-labelledby="title desc">
+  <title id="title">Pantalla Pomodoro del flipclock</title>
+  <desc id="desc">Vista representativa de la pantalla Pomodoro con contador, fase de trabajo, progreso y controles.</desc>
+  <defs>
+    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#36373b"/>
+      <stop offset="1" stop-color="#17181b"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" rx="14" fill="url(#case)"/>
+  <rect x="12" y="42" width="456" height="177" rx="10" fill="#060709" stroke="#111216" stroke-width="8"/>
+  <g font-family="Arial, sans-serif">
+    <text x="20" y="28" fill="#d8d8dc" font-size="18">TRABAJO</text>
+    <text x="458" y="28" fill="#9a9a9e" font-size="16" text-anchor="end">POMODORO 1/4</text>
+  </g>
+  <g>
+    <rect x="24" y="54" width="204" height="145" rx="6" fill="#292a2e"/>
+    <rect x="252" y="54" width="204" height="145" rx="6" fill="#292a2e"/>
+    <path d="M24 126h204M252 126h204" stroke="#111216" stroke-width="5"/>
+    <g fill="#f2f1ed" font-family="Arial, sans-serif" font-size="108" text-anchor="middle">
+      <text x="126" y="123">2</text><text x="354" y="123">5</text>
+      <text x="126" y="194">0</text><text x="354" y="194">0</text>
+    </g>
+  </g>
+  <text x="240" y="238" fill="#9a9a9e" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">PAUSADO</text>
+  <g font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <rect x="12" y="266" width="144" height="38" rx="8" fill="#45474d"/>
+    <rect x="168" y="266" width="144" height="38" rx="8" fill="#45474d"/>
+    <rect x="324" y="266" width="144" height="38" rx="8" fill="#45474d"/>
+    <text x="84" y="290" fill="#fff">Iniciar</text>
+    <text x="240" y="290" fill="#fff">Reiniciar</text>
+    <text x="396" y="290" fill="#fff">Saltar</text>
+  </g>
+</svg>

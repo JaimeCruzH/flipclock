@@ -3,32 +3,44 @@
 #include "time_src.h"
 #include "prefs.h"
 #include "esp_bsp.h"
+#include "pomodoro_ui.h"
+#include "pomodoro_src.h"
 
 #include <lvgl.h>
 #include <stdio.h>
 
 /*
- * Pantalla de ajustes en tres pestanas: HORA (rollers grandes, pensados para el
- * dedo), WIFI (dos campos y el teclado de LVGL) y PANTALLA (brillo y giro de
- * 180 grados). Se crea al abrirla y se destruye al cerrarla: no tiene sentido
- * tener esto ocupando RAM las 24 horas.
+ * Pantalla de ajustes en cuatro pestanas: HORA (rollers grandes, pensados para
+ * el dedo), WIFI (dos campos y el teclado de LVGL), PANTALLA (brillo y giro de
+ * 180 grados) y POMO (duraciones y ciclos). Se crea al abrirla y se destruye al
+ * cerrarla: no tiene sentido tener esto ocupando RAM las 24 horas.
  */
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_roll_h, *s_roll_m, *s_roll_d, *s_roll_mo, *s_roll_y;
 static lv_obj_t *s_ta_ssid, *s_ta_pass, *s_kb;
 static lv_obj_t *s_slider, *s_lbl_bright, *s_sw_flip;
+static lv_obj_t *s_pomo_work, *s_pomo_short, *s_pomo_long, *s_pomo_cycles;
+static lv_obj_t *s_sw_resume;
+static settings_origin_t s_origin = SETTINGS_FROM_CLOCK;
 
 static const char *OPT_HORA  = "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n"
                                "12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23";
 static const char *OPT_MES   = "ENE\nFEB\nMAR\nABR\nMAY\nJUN\n"
                                "JUL\nAGO\nSEP\nOCT\nNOV\nDIC";
 
+static char s_opt_pomo_minutes[99 * 3 + 1];
+static const char *OPT_POMO_CYCLES = "1\n2\n3\n4\n5\n6\n7\n8\n9";
+
+/* En este panel, 1 mm son aproximadamente 6,5 px. */
+#define POMO_MM_PX 7
+
 static void close_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
     bsp_display_brightness_set(prefs_get_brightness());   /* ya sin el minimo de UI */
-    clock_ui_show();
+    if (s_origin == SETTINGS_FROM_POMODORO) pomodoro_ui_show();
+    else                                    clock_ui_show();
     lv_obj_delete_async(s_scr);
     s_scr = NULL;
 }
@@ -74,15 +86,21 @@ static lv_obj_t *make_roller(lv_obj_t *parent, const char *opts, int sel, int w)
     return r;
 }
 
-static lv_obj_t *make_button(lv_obj_t *parent, const char *txt, lv_event_cb_t cb)
+static lv_obj_t *make_button_sized(lv_obj_t *parent, const char *txt,
+                                    lv_event_cb_t cb, int width, int height)
 {
     lv_obj_t *b = lv_button_create(parent);
-    lv_obj_set_size(b, 110, 44);
+    lv_obj_set_size(b, width, height);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b);
     lv_label_set_text(l, txt);
     lv_obj_center(l);
     return b;
+}
+
+static lv_obj_t *make_button(lv_obj_t *parent, const char *txt, lv_event_cb_t cb)
+{
+    return make_button_sized(parent, txt, cb, 110, 44);
 }
 
 static void build_tab_hora(lv_obj_t *tab)
@@ -182,6 +200,84 @@ static void flip_cb(lv_event_t *e)
     bsp_display_set_flipped(on);
 }
 
+static void preset_pomo_cb(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    lv_roller_set_selected(s_pomo_work, 24, LV_ANIM_OFF);
+    lv_roller_set_selected(s_pomo_short, 4, LV_ANIM_OFF);
+    lv_roller_set_selected(s_pomo_long, 14, LV_ANIM_OFF);
+    lv_roller_set_selected(s_pomo_cycles, 3, LV_ANIM_OFF);
+}
+
+static void save_pomo_cb(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    prefs_pomodoro_t p;
+    p.work_minutes = (uint16_t)lv_roller_get_selected(s_pomo_work) + 1;
+    p.short_break_minutes = (uint16_t)lv_roller_get_selected(s_pomo_short) + 1;
+    p.long_break_minutes = (uint16_t)lv_roller_get_selected(s_pomo_long) + 1;
+    p.pomodoros_per_cycle = (uint8_t)lv_roller_get_selected(s_pomo_cycles) + 1;
+    p.resume_session = lv_obj_has_state(s_sw_resume, LV_STATE_CHECKED);
+    prefs_set_pomodoro(&p);
+    pomodoro_reload_config();
+    close_cb(e);
+}
+
+static void build_tab_pomodoro(lv_obj_t *tab)
+{
+    prefs_pomodoro_t p;
+    prefs_get_pomodoro(&p);
+
+    char *out = s_opt_pomo_minutes;
+    for (int i = 1; i <= 99; i++) {
+        out += sprintf(out, i == 1 ? "%d" : "\n%d", i);
+    }
+
+    const int xs[] = {10, 128, 246, 364};
+    const int widths[] = {96, 96, 96, 106};
+    const char *titles[] = {"Trabajo", "Corto", "Largo", "Bloques"};
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t *title = lv_label_create(tab);
+        lv_label_set_text(title, titles[i]);
+        lv_obj_set_width(title, widths[i]);
+        lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_pos(title, xs[i], -POMO_MM_PX);
+    }
+
+    s_pomo_work = make_roller(tab, s_opt_pomo_minutes, p.work_minutes - 1, widths[0]);
+    s_pomo_short = make_roller(tab, s_opt_pomo_minutes, p.short_break_minutes - 1, widths[1]);
+    s_pomo_long = make_roller(tab, s_opt_pomo_minutes, p.long_break_minutes - 1, widths[2]);
+    s_pomo_cycles = make_roller(tab, OPT_POMO_CYCLES, p.pomodoros_per_cycle - 1, widths[3]);
+    lv_obj_set_pos(s_pomo_work, xs[0], 20 - POMO_MM_PX);
+    lv_obj_set_pos(s_pomo_short, xs[1], 20 - POMO_MM_PX);
+    lv_obj_set_pos(s_pomo_long, xs[2], 20 - POMO_MM_PX);
+    lv_obj_set_pos(s_pomo_cycles, xs[3], 20 - POMO_MM_PX);
+
+    lv_obj_t *preset = make_button_sized(tab, "Usar preset clasico",
+                                          preset_pomo_cb, 220, 36);
+    lv_obj_set_pos(preset, 130, 128);
+
+    lv_obj_t *resume_label = lv_label_create(tab);
+    lv_label_set_text(resume_label, "Reanudar sesion tras reinicio");
+    lv_obj_set_pos(resume_label, 18, 178);
+
+    s_sw_resume = lv_switch_create(tab);
+    lv_obj_set_size(s_sw_resume, 70, 36);
+    lv_obj_align(s_sw_resume, LV_ALIGN_TOP_RIGHT, -18, 168);
+    if (p.resume_session) lv_obj_add_state(s_sw_resume, LV_STATE_CHECKED);
+
+    lv_obj_t *bar = lv_obj_create(tab);
+    lv_obj_remove_style_all(bar);
+    lv_obj_set_size(bar, lv_pct(100), 50);
+    lv_obj_align(bar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    make_button(bar, "Guardar", save_pomo_cb);
+    make_button(bar, "Cancelar", close_cb);
+}
+
 static void build_tab_pantalla(lv_obj_t *tab)
 {
     lv_obj_t *t = lv_label_create(tab);
@@ -225,9 +321,10 @@ static void build_tab_pantalla(lv_obj_t *tab)
     make_button(bar, "Volver", close_cb);
 }
 
-void settings_ui_open(void)
+void settings_ui_open(settings_origin_t origin)
 {
     if (s_scr) return;
+    s_origin = origin;
 
     /* Si el reloj estaba con el brillo muy bajo (o apagado del todo), subirlo
      * para que se vea la propia pantalla de ajustes. Es lo que hace posible
@@ -246,6 +343,11 @@ void settings_ui_open(void)
     build_tab_hora(lv_tabview_add_tab(tabs, "HORA"));
     build_tab_wifi(lv_tabview_add_tab(tabs, "WIFI"));
     build_tab_pantalla(lv_tabview_add_tab(tabs, "PANTALLA"));
+    build_tab_pomodoro(lv_tabview_add_tab(tabs, "POMO"));
+
+    if (s_origin == SETTINGS_FROM_POMODORO) {
+        lv_tabview_set_active(tabs, 3, LV_ANIM_OFF);
+    }
 
     /* El teclado se crea en la pantalla, no en la pestana, para que se dibuje
      * por encima de todo y no lo recorte el contenedor de la pestana. */

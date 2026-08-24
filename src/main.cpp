@@ -19,6 +19,8 @@
 #include "prefs.h"
 #include "weather_src.h"
 #include "weather_ui.h"
+#include "pomodoro_src.h"
+#include "pomodoro_ui.h"
 
 #define LVGL_PORT_ROTATION_DEGREE (90)
 
@@ -39,6 +41,7 @@ void setup()
 
     time_src_init();
     weather_src_init();
+    pomodoro_init();
 
     /* Las APIs de LVGL no son thread-safe: la UI se monta con el mutex cogido */
     bsp_display_lock(0);
@@ -50,6 +53,7 @@ void setup()
 
     clock_ui_create();
     weather_ui_create();
+    pomodoro_ui_create();
     if (prefs_get_flipped()) bsp_display_set_flipped(true);
     bsp_display_unlock();
 

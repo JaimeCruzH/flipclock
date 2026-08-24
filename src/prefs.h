@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,30 @@ float       prefs_get_lat(void);
 float       prefs_get_lon(void);
 const char *prefs_get_place(void);
 void        prefs_set_location(float lat, float lon, const char *place);
+
+/** Configuracion del temporizador Pomodoro, persistida en NVS. */
+typedef struct {
+    uint16_t work_minutes;
+    uint16_t short_break_minutes;
+    uint16_t long_break_minutes;
+    uint8_t  pomodoros_per_cycle;
+    bool     resume_session;
+} prefs_pomodoro_t;
+
+typedef struct {
+    uint8_t  phase;
+    uint8_t  pomodoro;
+    uint32_t remaining_seconds;
+    bool     completed;
+} prefs_pomodoro_session_t;
+
+void prefs_get_pomodoro(prefs_pomodoro_t *out);
+void prefs_set_pomodoro(const prefs_pomodoro_t *config);
+
+/** Instantanea de sesion. Devuelve false si no hay ninguna guardada. */
+bool prefs_get_pomodoro_session(prefs_pomodoro_session_t *out);
+void prefs_set_pomodoro_session(const prefs_pomodoro_session_t *session);
+void prefs_clear_pomodoro_session(void);
 
 /**
  * Brillo minimo mientras la pantalla de ajustes esta abierta.

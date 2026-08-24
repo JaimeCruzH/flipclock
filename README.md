@@ -1,7 +1,7 @@
 # Reloj flip fotorrealista — Elecrow 3.5" ESP32-S3 Display
 
 Reloj de tarjetas abatibles (*flip clock*) tipo Twemco, en 480x320 apaisado, con
-hora por NTP y ajuste manual táctil.
+hora por NTP, clima y un temporizador Pomodoro configurable mediante táctil.
 
 ![El reloj en marcha](docs/scene.png)
 
@@ -38,7 +38,7 @@ pio device monitor
 > / `REQUESTS_CA_BUNDLE` apuntando al CA bundle corporativo, o PlatformIO no
 > puede descargar el toolchain.
 
-Ocupación actual: **flash 3,28 MB de 6,55 MB** (50%), **RAM 14,4%**.
+Ocupación actual: **flash 4,04 MB de 6,55 MB** (61,7%), **RAM 15,6%**.
 
 ## Regenerar los sprites
 
@@ -145,11 +145,14 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
 
 ## Uso
 
-- **Pulsación larga** sobre la carcasa → ajustes, en tres pestañas:
+- El carrusel tiene tres pantallas: **Reloj → Clima → Pomodoro** deslizando a la
+  izquierda; el swipe a la derecha recorre el camino inverso.
+- **Pulsación larga** sobre la carcasa → ajustes, en cuatro pestañas:
   - **HORA** — rollers de hora, minuto y fecha.
   - **WIFI** — SSID y contraseña, en NVS con namespace `flipclk` (namespace propio para no
     colisionar con otros sketches del mismo dispositivo).
   - **PANTALLA** — brillo (0-100 %) y giro de 180°.
+  - **POMO** — trabajo, descansos, bloques por ciclo y reanudación tras reinicio.
 - Un punto verde tenue abajo a la derecha indica WiFi conectado.
 - Formato **24 horas**.
 - Zona horaria: **America/Santiago** (Chile continental), cadena POSIX
@@ -159,6 +162,47 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
   La Región de Magallanes no cambia de hora: allí sería `<-03>3`.
 - Sin red, el reloj funciona con el RTC interno y reintenta NTP cada 15 min. La
   UI nunca se bloquea esperando a la red.
+
+## Sección Clima
+
+![Pantalla representativa de Clima](docs/weather.svg)
+
+La pantalla de Clima muestra la ubicación, temperatura actual, condición,
+mínima y máxima, sensación térmica, origen y hora de observación, además de una
+franja con las próximas seis horas y su probabilidad de precipitación.
+
+La fuente actual es híbrida: las condiciones actuales se toman del METAR de una
+estación cercana cuando está disponible y el pronóstico horario procede de
+Open-Meteo. Si el METAR no responde, la pantalla usa también el modelo y lo
+indica como tal. La actualización se realiza en una tarea independiente para
+que la navegación táctil no se bloquee.
+
+## Sección Pomodoro
+
+![Pantalla representativa de Pomodoro](docs/pomodoro.svg)
+
+Pomodoro utiliza las tarjetas flip existentes para mostrar el contador `MM:SS`
+y señala siempre la fase actual: **TRABAJO**, **DESCANSO CORTO** o
+**DESCANSO LARGO**. También muestra el progreso del ciclo, por ejemplo
+`POMODORO 2/4`.
+
+La configuración está disponible desde la pestaña **POMO**. Sus valores por
+defecto son:
+
+- 25 minutos de trabajo.
+- 5 minutos de descanso corto.
+- 4 bloques por ciclo.
+- 15 minutos de descanso largo.
+
+Los cuatro valores se ajustan con rollers táctiles y existe un preset clásico.
+La sesión puede conservarse tras reiniciar activando **Reanudar sesión tras
+reinicio** y pulsando **Guardar**. El estado se almacena en un único bloque NVS
+con checkpoints cada 15 segundos; al arrancar se restaura pausado y no comienza
+automáticamente.
+
+En la pantalla Pomodoro están disponibles **Iniciar/Pausar**, **Reiniciar** y
+**Saltar**. El temporizador sigue activo aunque se vuelva al Reloj o se consulte
+el Clima, y al terminar una fase la pantalla Pomodoro vuelve a mostrarse.
 
 ### Brillo y giro
 

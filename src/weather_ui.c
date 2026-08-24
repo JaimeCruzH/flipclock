@@ -2,6 +2,7 @@
 #include "clock_ui.h"
 #include "weather_src.h"
 #include "prefs.h"
+#include "pomodoro_ui.h"
 #include "assets/wx_assets.h"
 #include "swipe.h"
 
@@ -105,6 +106,9 @@ static void on_swipe(lv_dir_t dir)
     if (dir == LV_DIR_RIGHT) {
         cancel_auto_back();
         clock_ui_show();
+    } else if (dir == LV_DIR_LEFT) {
+        cancel_auto_back();
+        pomodoro_ui_show();
     }
 }
 
@@ -271,4 +275,3 @@ void weather_ui_show(void)
     s_back_timer = lv_timer_create(auto_back_cb, AUTO_BACK_MS, NULL);
     lv_timer_set_repeat_count(s_back_timer, 1);
 }
-
