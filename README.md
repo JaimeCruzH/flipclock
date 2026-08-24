@@ -179,7 +179,7 @@ que la navegación táctil no se bloquee.
 
 ## Sección Pomodoro
 
-![Pantalla representativa de Pomodoro](docs/pomodoro.svg)
+![Pantalla fotorrealista de Pomodoro](docs/pomodoro.png)
 
 Pomodoro utiliza las tarjetas flip existentes para mostrar el contador `MM:SS`
 y señala siempre la fase actual: **TRABAJO**, **DESCANSO CORTO** o
