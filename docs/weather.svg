@@ -22,7 +22,7 @@
   <circle cx="420" cy="64" r="19" fill="#ffd66b"/>
   <rect x="12" y="188" width="456" height="120" rx="14" fill="#fff" opacity=".2"/>
   <g font-family="Arial, sans-serif" text-anchor="middle">
-    <g fill="#d8deea" font-size="16">
+    <g fill="#fff" font-size="16">
       <text x="50" y="210">19 h</text><text x="126" y="210">20 h</text><text x="202" y="210">21 h</text>
       <text x="278" y="210">22 h</text><text x="354" y="210">23 h</text><text x="430" y="210">00 h</text>
     </g>
@@ -34,7 +34,7 @@
       <text x="50" y="276">22°</text><text x="126" y="276">21°</text><text x="202" y="276">20°</text>
       <text x="278" y="276">18°</text><text x="354" y="276">17°</text><text x="430" y="276">16°</text>
     </g>
-    <g fill="#8fc4f0" font-size="14">
+    <g fill="#1d4f91" font-size="14">
       <text x="50" y="298">0%</text><text x="126" y="298">0%</text><text x="202" y="298">0%</text>
       <text x="278" y="298">0%</text><text x="354" y="298">0%</text><text x="430" y="298">0%</text>
     </g>

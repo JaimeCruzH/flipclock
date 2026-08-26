@@ -40,6 +40,10 @@ pio device monitor
 
 Ocupación actual: **flash 4,04 MB de 6,55 MB** (61,7%), **RAM 15,6%**.
 
+Para las rutas exactas del entorno, versiones instaladas, recuperación del
+`.venv`, problemas conocidos y procedimiento de carga en `COM8`, ver
+[`docs/ENTORNO_DESARROLLO.md`](docs/ENTORNO_DESARROLLO.md).
+
 ## Regenerar los sprites
 
 Los assets embebidos (`src/assets/`) están versionados, así que no hace falta

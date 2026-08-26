@@ -171,7 +171,7 @@ void weather_ui_create(void)
     for (int i = 0; i < 6; i++) {
         int cx = i * col_w;
 
-        s_h_hour[i] = label(s_strip, &lv_font_montserrat_16, SOFT);
+        s_h_hour[i] = label(s_strip, &lv_font_montserrat_16, WHITE);
         lv_obj_set_width(s_h_hour[i], col_w);
         lv_obj_set_style_text_align(s_h_hour[i], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_pos(s_h_hour[i], cx, 6);
@@ -184,7 +184,7 @@ void weather_ui_create(void)
         lv_obj_set_style_text_align(s_h_temp[i], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_pos(s_h_temp[i], cx, 72);
 
-        s_h_pop[i] = label(s_strip, &lv_font_montserrat_14, lv_color_hex(0x8FC4F0));
+        s_h_pop[i] = label(s_strip, &lv_font_montserrat_14, lv_color_hex(0x1D4F91));
         lv_obj_set_width(s_h_pop[i], col_w);
         lv_obj_set_style_text_align(s_h_pop[i], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_pos(s_h_pop[i], cx, 96);
@@ -245,7 +245,11 @@ static void refresh(void)
     lv_obj_remove_flag(s_icon_big, LV_OBJ_FLAG_HIDDEN);
     lv_image_set_src(s_icon_big, wx_icon_big(d.cond, d.is_day));
 
+    lv_color_t pop_color = d.is_day ? lv_color_hex(0x1D4F91)
+                                   : lv_color_hex(0xA8D7FF);
+
     for (int i = 0; i < 6; i++) {
+        lv_obj_set_style_text_color(s_h_pop[i], pop_color, 0);
         if (i < d.n_hours) {
             snprintf(buf, sizeof(buf), "%02d h", d.hours[i].hour);
             lv_label_set_text(s_h_hour[i], buf);
