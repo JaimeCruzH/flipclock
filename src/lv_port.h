@@ -165,6 +165,11 @@ bool lvgl_port_lock(uint32_t timeout_ms);
  */
 void lvgl_port_unlock(void);
 
+#if defined(NIGHT_TTF_BENCHMARK)
+void lvgl_port_benchmark_reset(void);
+void lvgl_port_benchmark_print(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

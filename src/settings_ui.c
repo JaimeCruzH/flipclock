@@ -3,6 +3,7 @@
 #include "time_src.h"
 #include "prefs.h"
 #include "esp_bsp.h"
+#include "night_ui.h"
 #include "pomodoro_ui.h"
 #include "pomodoro_src.h"
 
@@ -20,6 +21,7 @@ static lv_obj_t *s_scr;
 static lv_obj_t *s_roll_h, *s_roll_m, *s_roll_d, *s_roll_mo, *s_roll_y;
 static lv_obj_t *s_ta_ssid, *s_ta_pass, *s_kb;
 static lv_obj_t *s_slider, *s_lbl_bright, *s_sw_flip;
+static lv_obj_t *s_night_roller;
 static lv_obj_t *s_pomo_work, *s_pomo_short, *s_pomo_long, *s_pomo_cycles;
 static lv_obj_t *s_sw_resume;
 static settings_origin_t s_origin = SETTINGS_FROM_CLOCK;
@@ -31,6 +33,9 @@ static const char *OPT_MES   = "ENE\nFEB\nMAR\nABR\nMAY\nJUN\n"
 
 static char s_opt_pomo_minutes[99 * 3 + 1];
 static const char *OPT_POMO_CYCLES = "1\n2\n3\n4\n5\n6\n7\n8\n9";
+static const char *OPT_NIGHT_BRIGHTNESS =
+    "1%\n2%\n3%\n4%\n5%\n6%\n7%\n8%\n9%\n10%\n"
+    "11%\n12%\n13%\n14%\n15%\n16%\n17%\n18%\n19%\n20%";
 
 /* En este panel, 1 mm son aproximadamente 6,5 px. */
 #define POMO_MM_PX 7
@@ -200,6 +205,21 @@ static void flip_cb(lv_event_t *e)
     bsp_display_set_flipped(on);
 }
 
+static void night_cb(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    lv_obj_delete_async(s_scr);
+    s_scr = NULL;
+    night_ui_show();
+}
+
+static void night_brightness_cb(lv_event_t *e)
+{
+    int brightness = (int)lv_roller_get_selected(lv_event_get_target(e))
+                     + PREFS_NIGHT_BRIGHTNESS_MIN;
+    prefs_set_night_brightness(brightness);
+}
+
 static void preset_pomo_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
@@ -310,15 +330,18 @@ static void build_tab_pantalla(lv_obj_t *tab)
     if (prefs_get_flipped()) lv_obj_add_state(s_sw_flip, LV_STATE_CHECKED);
     lv_obj_add_event_cb(s_sw_flip, flip_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t *bar = lv_obj_create(tab);
-    lv_obj_remove_style_all(bar);
-    lv_obj_set_size(bar, lv_pct(100), 50);
-    lv_obj_align(bar, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_flex_flow(bar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
-    make_button(bar, "Volver", close_cb);
+    lv_obj_t *night = make_button(tab, "Noche", night_cb);
+    lv_obj_set_pos(night, 20, 106);
+
+    s_night_roller = make_roller(
+        tab, OPT_NIGHT_BRIGHTNESS,
+        prefs_get_night_brightness() - PREFS_NIGHT_BRIGHTNESS_MIN, 72);
+    lv_obj_set_pos(s_night_roller, 39, 154);
+    lv_obj_add_event_cb(s_night_roller, night_brightness_cb,
+                        LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_t *back = make_button(tab, "Volver", close_cb);
+    lv_obj_align(back, LV_ALIGN_BOTTOM_RIGHT, -12, -4);
 }
 
 void settings_ui_open(settings_origin_t origin)

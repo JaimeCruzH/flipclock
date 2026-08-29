@@ -1032,12 +1032,20 @@
 #endif
 
 /** Built-in TTF decoder */
-#define LV_USE_TINY_TTF 0
+#ifndef LV_USE_TINY_TTF
+    #define LV_USE_TINY_TTF 0
+#endif
 #if LV_USE_TINY_TTF
     /* Enable loading TTF data from files */
-    #define LV_TINY_TTF_FILE_SUPPORT 0
-    #define LV_TINY_TTF_CACHE_GLYPH_CNT 128
-    #define LV_TINY_TTF_CACHE_KERNING_CNT 256
+    #ifndef LV_TINY_TTF_FILE_SUPPORT
+        #define LV_TINY_TTF_FILE_SUPPORT 0
+    #endif
+    #ifndef LV_TINY_TTF_CACHE_GLYPH_CNT
+        #define LV_TINY_TTF_CACHE_GLYPH_CNT 128
+    #endif
+    #ifndef LV_TINY_TTF_CACHE_KERNING_CNT
+        #define LV_TINY_TTF_CACHE_KERNING_CNT 256
+    #endif
 #endif
 
 /** Rlottie library */

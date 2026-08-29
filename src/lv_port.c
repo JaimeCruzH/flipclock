@@ -5,12 +5,14 @@
  */
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_check.h"
 #include "esp_timer.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -74,6 +76,13 @@ typedef struct {
 *******************************************************************************/
 static lvgl_port_ctx_t lvgl_port_ctx;
 static int lvgl_port_timer_period_ms = 5;
+
+#if defined(NIGHT_TTF_BENCHMARK)
+static int64_t s_benchmark_start_us;
+static uint64_t s_benchmark_handler_us;
+static uint32_t s_benchmark_handler_count;
+static uint32_t s_benchmark_handler_max_us;
+#endif
 
 /*******************************************************************************
 * Function definitions
@@ -395,6 +404,41 @@ void lvgl_port_unlock(void)
     xSemaphoreGiveRecursive(lvgl_port_ctx.lvgl_mux);
 }
 
+#if defined(NIGHT_TTF_BENCHMARK)
+void lvgl_port_benchmark_reset(void)
+{
+    s_benchmark_start_us = esp_timer_get_time();
+    s_benchmark_handler_us = 0;
+    s_benchmark_handler_count = 0;
+    s_benchmark_handler_max_us = 0;
+}
+
+void lvgl_port_benchmark_print(void)
+{
+    const int64_t elapsed_us = esp_timer_get_time() - s_benchmark_start_us;
+    const uint64_t load_x100 = elapsed_us > 0
+                             ? (s_benchmark_handler_us * 10000ULL) / (uint64_t)elapsed_us
+                             : 0;
+
+    ESP_LOGI(TAG,
+             "[bench] window_ms=%" PRId64 " handlers=%" PRIu32
+             " handler_us=%" PRIu64 " max_handler_us=%" PRIu32
+             " lvgl_load=%" PRIu64 ".%02" PRIu64 "%%"
+             " free8=%" PRIu32 " min8=%" PRIu32
+             " internal=%" PRIu32 " spiram=%" PRIu32,
+             elapsed_us / 1000,
+             s_benchmark_handler_count,
+             s_benchmark_handler_us,
+             s_benchmark_handler_max_us,
+             load_x100 / 100,
+             load_x100 % 100,
+             heap_caps_get_free_size(MALLOC_CAP_8BIT),
+             heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
+             heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+}
+#endif
+
 void lvgl_port_flush_ready(lv_display_t *disp)
 {
     assert(disp);
@@ -417,7 +461,16 @@ static void lvgl_port_task(void *arg)
     lvgl_port_ctx.running = true;
     while (lvgl_port_ctx.running) {
         if (lvgl_port_lock(0)) {
+#if defined(NIGHT_TTF_BENCHMARK)
+            const int64_t handler_start_us = esp_timer_get_time();
+#endif
             task_delay_ms = lv_timer_handler();
+#if defined(NIGHT_TTF_BENCHMARK)
+            const uint32_t handler_us = (uint32_t)(esp_timer_get_time() - handler_start_us);
+            s_benchmark_handler_us += handler_us;
+            s_benchmark_handler_count++;
+            if (handler_us > s_benchmark_handler_max_us) s_benchmark_handler_max_us = handler_us;
+#endif
             lvgl_port_unlock();
         }
         /*

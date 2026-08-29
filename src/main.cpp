@@ -21,6 +21,9 @@
 #include "weather_ui.h"
 #include "pomodoro_src.h"
 #include "pomodoro_ui.h"
+#if defined(NIGHT_TTF_BENCHMARK)
+#include "night_ui.h"
+#endif
 
 #define LVGL_PORT_ROTATION_DEGREE (90)
 
@@ -57,6 +60,10 @@ void setup()
     if (prefs_get_flipped()) bsp_display_set_flipped(true);
     bsp_display_unlock();
 
+#if defined(NIGHT_TTF_BENCHMARK)
+    lvgl_port_benchmark_reset();
+#endif
+
     Serial.println("flipclock: listo. Comandos: f = volteo, t = hora, w = tiempo, W = refrescar tiempo");
 }
 
@@ -82,6 +89,21 @@ void loop()
                           t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
                           t.tm_hour, t.tm_min, t.tm_sec,
                           time_src_is_valid(), time_src_wifi_connected());
+#if defined(NIGHT_TTF_BENCHMARK)
+        } else if (c == 'b') {
+            bsp_display_lock(0);
+            night_ui_run_benchmark();
+            bsp_display_unlock();
+        } else if (c == 'r') {
+            bsp_display_lock(0);
+            lvgl_port_benchmark_reset();
+            bsp_display_unlock();
+            Serial.println("[bench] contadores reiniciados");
+        } else if (c == 'p') {
+            bsp_display_lock(0);
+            lvgl_port_benchmark_print();
+            bsp_display_unlock();
+#endif
         }
     }
     delay(20);

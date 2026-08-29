@@ -23,6 +23,7 @@ typedef struct {
 
 static Preferences nvs;
 static int  s_brightness = 100;
+static int  s_night_brightness = PREFS_NIGHT_BRIGHTNESS_DEFAULT;
 static bool s_flipped = false;
 static float s_lat = DEF_LAT;
 static float s_lon = DEF_LON;
@@ -53,6 +54,7 @@ void prefs_init(void)
 {
     nvs.begin(NVS_NS, true);
     s_brightness = nvs.getInt("bright", 100);
+    s_night_brightness = nvs.getInt("night_bright", PREFS_NIGHT_BRIGHTNESS_DEFAULT);
     s_flipped = nvs.getBool("flip180", false);
     s_lat = nvs.getFloat("lat", DEF_LAT);
     s_lon = nvs.getFloat("lon", DEF_LON);
@@ -67,6 +69,12 @@ void prefs_init(void)
 
     if (s_brightness < 0)   s_brightness = 0;
     if (s_brightness > 100) s_brightness = 100;
+    if (s_night_brightness < PREFS_NIGHT_BRIGHTNESS_MIN) {
+        s_night_brightness = PREFS_NIGHT_BRIGHTNESS_MIN;
+    }
+    if (s_night_brightness > PREFS_NIGHT_BRIGHTNESS_MAX) {
+        s_night_brightness = PREFS_NIGHT_BRIGHTNESS_MAX;
+    }
 }
 
 int prefs_get_brightness(void)
@@ -82,6 +90,23 @@ void prefs_set_brightness(int percent)
     s_brightness = percent;
     nvs.begin(NVS_NS, false);
     nvs.putInt("bright", percent);
+    nvs.end();
+}
+
+int prefs_get_night_brightness(void)
+{
+    return s_night_brightness;
+}
+
+void prefs_set_night_brightness(int percent)
+{
+    if (percent < PREFS_NIGHT_BRIGHTNESS_MIN) percent = PREFS_NIGHT_BRIGHTNESS_MIN;
+    if (percent > PREFS_NIGHT_BRIGHTNESS_MAX) percent = PREFS_NIGHT_BRIGHTNESS_MAX;
+    if (percent == s_night_brightness) return;
+
+    s_night_brightness = percent;
+    nvs.begin(NVS_NS, false);
+    nvs.putInt("night_bright", percent);
     nvs.end();
 }
 

@@ -38,7 +38,9 @@ pio device monitor
 > / `REQUESTS_CA_BUNDLE` apuntando al CA bundle corporativo, o PlatformIO no
 > puede descargar el toolchain.
 
-Ocupación actual: **flash 4,04 MB de 6,55 MB** (61,7%), **RAM 15,6%**.
+Ocupación del perfil normal: **flash 4,04 MB de 6,55 MB** (61,7%), **RAM 15,6%**.
+La variante experimental Tiny TTF usa 4,30 MB (65,7%); sus mediciones y el
+procedimiento están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
 
 Para las rutas exactas del entorno, versiones instaladas, recuperación del
 `.venv`, problemas conocidos y procedimiento de carga en `COM8`, ver
@@ -155,7 +157,8 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
   - **HORA** — rollers de hora, minuto y fecha.
   - **WIFI** — SSID y contraseña, en NVS con namespace `flipclk` (namespace propio para no
     colisionar con otros sketches del mismo dispositivo).
-  - **PANTALLA** — brillo (0-100 %) y giro de 180°.
+  - **PANTALLA** — brillo (0-100 %), giro de 180° y modo **Noche** con roller de
+    brillo nocturno (1-20 %, por defecto 3 %).
   - **POMO** — trabajo, descansos, bloques por ciclo y reanudación tras reinicio.
 - Un punto verde tenue abajo a la derecha indica WiFi conectado.
 - Formato **24 horas**.
@@ -249,6 +252,15 @@ de `PREFS_BRIGHTNESS_UI_MIN` (10 %) — si no, no se vería el propio deslizador
 y el valor real se aplica al salir. Para recuperarse de un 0 %: pulsación larga
 sobre la pantalla apagada, que sube el brillo al mínimo de UI al abrir ajustes.
 
+### Modo noche y tipografía
+
+Desde `PANTALLA -> Noche` se abre una pantalla negra que muestra únicamente la
+hora `HH:MM`. La salida se realiza manteniendo cualquier zona de la pantalla
+durante 2 segundos. La variante Tiny TTF rasteriza la fuente Montserrat al
+tamaño nativo máximo que permite mostrar completa la hora, sin escalar un
+bitmap de baja resolución. Los detalles de implementación, pruebas y recursos
+están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
+
 ### Comandos por Serial (115200)
 
 - `f` — fuerza un volteo, para no esperar al minuto durante el desarrollo.
@@ -261,6 +273,8 @@ sobre la pantalla apagada, que sube el brillo al mínimo de UI al abrir ajustes.
 - [x] NTP contra router real, hora de Santiago correcta
 - [x] Giro de 180° en caliente (imagen + táctil)
 - [x] Brillo con gamma: al 3 % sirve como reloj de noche, sin parpadeo
+- [x] Modo noche: fondo negro, solo hora, salida por pulsación de 2 s
+- [x] Tiny TTF probado: tamaño máximo nativo de 171 px y dígitos nítidos
 
 ### Rendimiento: lo que se intentó y por qué quedó así
 

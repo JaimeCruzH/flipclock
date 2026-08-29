@@ -15,6 +15,8 @@ void prefs_init(void);
 /** Brillo del backlight, 0..100 %. */
 int  prefs_get_brightness(void);
 void prefs_set_brightness(int percent);
+int  prefs_get_night_brightness(void);
+void prefs_set_night_brightness(int percent);
 
 /** true = imagen girada 180 grados (placa montada del otro lado). */
 bool prefs_get_flipped(void);
@@ -57,6 +59,9 @@ void prefs_clear_pomodoro_session(void);
  * se aplica al salir.
  */
 #define PREFS_BRIGHTNESS_UI_MIN 10
+#define PREFS_NIGHT_BRIGHTNESS_MIN 1
+#define PREFS_NIGHT_BRIGHTNESS_MAX 20
+#define PREFS_NIGHT_BRIGHTNESS_DEFAULT 3
 
 #ifdef __cplusplus
 }
