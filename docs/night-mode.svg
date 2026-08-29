@@ -3,8 +3,7 @@
   <desc id="desc">Fondo negro absoluto con la hora 22:35 e iluminación simulada al 10%.</desc>
   <rect width="480" height="320" fill="#000000"/>
   <text x="240" y="160"
-        fill="#ffffff"
-        fill-opacity="0.10"
+        fill="#1a1a1a"
         font-family="Montserrat, Arial, sans-serif"
         font-size="171px"
         font-weight="500"

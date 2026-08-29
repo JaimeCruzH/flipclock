@@ -262,7 +262,7 @@ bitmap de baja resolución. Los detalles de implementación, pruebas y recursos
 están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
 
 <p align="center">
-  <img src="docs/night-mode.svg" alt="Pantalla del modo noche con fondo negro y hora blanca" width="40%">
+  <img src="docs/night-mode.svg" alt="Pantalla del modo noche con fondo negro y hora atenuada al 10%" width="40%">
 </p>
 
 ### Comandos por Serial (115200)
