@@ -10,7 +10,10 @@ embebe en la placa, pixel por pixel.*
 
 Hardware: **Elecrow 3.5" ESP32-S3 Display**, panel ST77922 de 320x480 con táctil
 capacitivo, 16 MB de flash y PSRAM octal. Firmware sobre **LVGL 9.5.0** y
-Arduino-ESP32 3.2.1 (IDF 5.4.2), compilado con **PlatformIO**.
+Arduino-ESP32 3.2.1 (IDF 5.4.x), compilado con **PlatformIO**. La batería Li-Po
+se mide mediante el divisor conectado a `GPIO8`; la [especificación de
+Elecrow](https://www.elecrow.com/download/product/DLE06235B/3.5inch_IPS_ESP32-S3_Specification.pdf)
+documenta esa entrada.
 
 ## Cómo compilar
 
@@ -38,7 +41,7 @@ pio device monitor
 > / `REQUESTS_CA_BUNDLE` apuntando al CA bundle corporativo, o PlatformIO no
 > puede descargar el toolchain.
 
-Ocupación del perfil normal: **flash 4,04 MB de 6,55 MB** (61,7%), **RAM 15,6%**.
+Ocupación del perfil normal: **flash 4,06 MB de 6,55 MB** (61,9%), **RAM 15,7%**.
 La variante experimental Tiny TTF usa 4,30 MB (65,7%); sus mediciones y el
 procedimiento están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
 
@@ -156,7 +159,8 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
 - **Pulsación larga** sobre la carcasa → ajustes, en cuatro pestañas:
   - **HORA** — rollers de hora, minuto y fecha.
   - **WIFI** — SSID y contraseña, en NVS con namespace `flipclk` (namespace propio para no
-    colisionar con otros sketches del mismo dispositivo).
+    colisionar con otros sketches del mismo dispositivo), además de voltaje, porcentaje,
+    tendencia y autonomía estimada de la batería.
   - **PANTALLA** — brillo (0-100 %), giro de 180° y modo **Noche** con roller de
     brillo nocturno (1-20 %, por defecto 3 %).
   - **POMO** — trabajo, descansos, bloques por ciclo y reanudación tras reinicio.
@@ -169,6 +173,21 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
   La Región de Magallanes no cambia de hora: allí sería `<-03>3`.
 - Sin red, el reloj funciona con el RTC interno y reintenta NTP cada 15 min. La
   UI nunca se bloquea esperando a la red.
+
+## Batería
+
+La pestaña **WIFI** muestra el voltaje y el porcentaje aproximado de la batería,
+además de una tendencia: flecha verde cuando el voltaje sube, flecha roja cuando
+baja y círculo azul cuando permanece estable. Los textos de la pantalla usan
+ASCII (`Bateria`, `Tendencia`, `Autonomia`) para que no dependan de glifos con
+acento que la fuente embebida no contiene.
+
+El muestreador toma una medición al arrancar y otra cada 10 minutos aunque la
+pantalla de ajustes esté cerrada. Cuando detecta una descarga sostenida muestra
+una autonomía aproximada y el ritmo de caída en porcentaje por hora. No es una
+medición de mA: el cargador no entrega al ESP32 una lectura directa de corriente.
+Los detalles del cálculo, sus límites y la prueba recomendada están en
+[`docs/BATERIA.md`](docs/BATERIA.md).
 
 ## Sección Clima
 
@@ -279,6 +298,7 @@ están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
 - [x] Brillo con gamma: al 3 % sirve como reloj de noche, sin parpadeo
 - [x] Modo noche: fondo negro, solo hora, salida por pulsación de 2 s
 - [x] Tiny TTF probado: tamaño máximo nativo de 171 px y dígitos nítidos
+- [x] Batería: voltaje, porcentaje, tendencia y autonomía estimada en WIFI
 
 ### Rendimiento: lo que se intentó y por qué quedó así
 

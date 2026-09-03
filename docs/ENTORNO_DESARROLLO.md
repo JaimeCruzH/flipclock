@@ -1,7 +1,7 @@
 # Entorno de desarrollo, compilacion y carga
 
 Guia operativa del proyecto `flipclock`. La ultima verificacion de las rutas,
-versiones y comandos de esta guia se hizo el **2026-08-26**.
+versiones y comandos de esta guia se hizo el **2026-09-03**.
 
 La guia vive dentro del repositorio para que un clon de GitHub indique donde
 estan las herramientas y que hacer cuando una instalacion local no funciona.
@@ -144,8 +144,8 @@ Con las variables de certificados definidas:
 
 El ultimo build verificado genero correctamente `firmware.elf` y uso:
 
-- RAM: 51.024 de 327.680 bytes (15,6 %).
-- Flash de aplicacion: 4.042.734 de 6.553.600 bytes (61,7 %).
+- RAM: 51.480 de 327.680 bytes (15,7 %).
+- Flash de aplicacion: 4.058.074 de 6.553.600 bytes (61,9 %).
 
 No considerar suficiente el mensaje `Successfully created ESP32S3 image.`:
 puede corresponder solo al bootloader. La validacion real es el codigo de
@@ -177,7 +177,7 @@ solo no confirma que el firmware se haya escrito completo.
 En esta maquina el primer intento de carga se bloqueo por un
 `UnicodeEncodeError` de cp1252 al imprimir la barra de progreso. Repetir con
 `PYTHONIOENCODING=utf-8` y `PYTHONUTF8=1` resolvio el problema; la segunda carga
-escribio 4.043.136 bytes, verifico el hash y termino correctamente.
+escribio 4.058.480 bytes, verifico el hash y termino correctamente.
 
 ## 8. Monitor serie
 
@@ -237,6 +237,8 @@ tabla de particiones de 16 MB y producir otro bucle de arranque. Quitar
 - `src/esp_lcd_touch.*`: tactil.
 - `src/esp_bsp.*`: inicializacion de placa y brillo.
 - `src/clock_ui.c`, `src/weather_ui.c` y `src/pomodoro_ui.c`: pantallas.
+- `src/battery_src.c` y `src/battery_src.h`: lectura de `GPIO8`, muestreo cada
+  10 min, tendencia y autonomia estimada.
 - `src/weather_src.cpp`: datos y API meteorologica.
 - `src/assets/` y `tools/gen_assets.py`: sprites.
 

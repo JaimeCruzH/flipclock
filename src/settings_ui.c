@@ -6,6 +6,7 @@
 #include "night_ui.h"
 #include "pomodoro_ui.h"
 #include "pomodoro_src.h"
+#include "battery_src.h"
 
 #include <lvgl.h>
 #include <stdio.h>
@@ -24,6 +25,10 @@ static lv_obj_t *s_slider, *s_lbl_bright, *s_sw_flip;
 static lv_obj_t *s_night_roller;
 static lv_obj_t *s_pomo_work, *s_pomo_short, *s_pomo_long, *s_pomo_cycles;
 static lv_obj_t *s_sw_resume;
+static lv_obj_t *s_lbl_battery;
+static lv_obj_t *s_lbl_battery_trend;
+static lv_obj_t *s_lbl_battery_runtime;
+static lv_timer_t *s_battery_timer;
 static settings_origin_t s_origin = SETTINGS_FROM_CLOCK;
 
 static const char *OPT_HORA  = "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n"
@@ -43,6 +48,13 @@ static const char *OPT_NIGHT_BRIGHTNESS =
 static void close_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
+    if (s_battery_timer) {
+        lv_timer_delete(s_battery_timer);
+        s_battery_timer = NULL;
+    }
+    s_lbl_battery = NULL;
+    s_lbl_battery_trend = NULL;
+    s_lbl_battery_runtime = NULL;
     bsp_display_brightness_set(prefs_get_brightness());   /* ya sin el minimo de UI */
     if (s_origin == SETTINGS_FROM_POMODORO) pomodoro_ui_show();
     else                                    clock_ui_show();
@@ -78,6 +90,97 @@ static void kb_ready_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
     lv_obj_add_flag(s_kb, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void battery_trend_update(const battery_data_t *data)
+{
+    if (!s_lbl_battery_trend || !data) return;
+
+    const char *symbol = LV_SYMBOL_BULLET;
+    const char *state = "Esperando";
+    lv_color_t color = lv_color_hex(0x9A9A9E);
+
+    switch (data->trend) {
+    case BATTERY_TREND_UP:
+        symbol = LV_SYMBOL_UP;
+        state = "Cargando";
+        color = lv_color_hex(0x22C55E);
+        break;
+    case BATTERY_TREND_DOWN:
+        symbol = LV_SYMBOL_DOWN;
+        state = "Descargando";
+        color = lv_color_hex(0xEF4444);
+        break;
+    case BATTERY_TREND_STABLE:
+        symbol = LV_SYMBOL_BULLET;
+        state = "Estable";
+        color = lv_color_hex(0x3B82F6);
+        break;
+    default:
+        break;
+    }
+
+    char text[48];
+    snprintf(text, sizeof(text), "Tendencia: %s %s", symbol, state);
+    lv_label_set_text(s_lbl_battery_trend, text);
+    lv_obj_set_style_text_color(s_lbl_battery_trend, color, 0);
+}
+
+static void battery_runtime_update(const battery_data_t *data)
+{
+    if (!s_lbl_battery_runtime || !data) return;
+
+    char text[64];
+    if (data->autonomy_valid) {
+        const unsigned hours = (unsigned)(data->autonomy_minutes / 60);
+        const unsigned minutes = (unsigned)(data->autonomy_minutes % 60);
+        if (hours > 0) {
+            snprintf(text, sizeof(text), "Autonomia: ~%uh %02um  (-%u%%/h)",
+                     hours, minutes,
+                     (unsigned)data->discharge_percent_per_hour);
+        } else {
+            snprintf(text, sizeof(text), "Autonomia: ~%um  (-%u%%/h)",
+                     minutes,
+                     (unsigned)data->discharge_percent_per_hour);
+        }
+    } else if (data->trend == BATTERY_TREND_DOWN) {
+        snprintf(text, sizeof(text), "Autonomia: calculando...");
+    } else if (data->trend == BATTERY_TREND_UP) {
+        snprintf(text, sizeof(text), "Autonomia: no aplica mientras carga");
+    } else if (data->trend == BATTERY_TREND_STABLE) {
+        snprintf(text, sizeof(text), "Autonomia: esperando descarga");
+    } else {
+        snprintf(text, sizeof(text), "Autonomia: esperando mediciones");
+    }
+    lv_label_set_text(s_lbl_battery_runtime, text);
+}
+
+static void battery_update(void)
+{
+    if (!s_lbl_battery) return;
+
+    battery_data_t data;
+    if (!battery_src_read(&data)) {
+        lv_label_set_text(s_lbl_battery, "Bateria: sin lectura");
+        battery_trend_update(&data);
+        battery_runtime_update(&data);
+        return;
+    }
+
+    char text[48];
+    snprintf(text, sizeof(text), "Bateria: %d%%  (%u,%02u V)",
+             (int)data.percent,
+             (unsigned)(data.millivolts / 1000),
+             (unsigned)((data.millivolts % 1000) / 10));
+    lv_label_set_text(s_lbl_battery, text);
+    battery_trend_update(&data);
+    battery_runtime_update(&data);
+}
+
+static void battery_timer_cb(lv_timer_t *timer)
+{
+    LV_UNUSED(timer);
+    battery_update();
 }
 
 static lv_obj_t *make_roller(lv_obj_t *parent, const char *opts, int sel, int w)
@@ -182,6 +285,21 @@ static void build_tab_wifi(lv_obj_t *tab)
     lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
     make_button(bar, "Conectar", save_wifi_cb);
     make_button(bar, "Cancelar", close_cb);
+
+    s_lbl_battery = lv_label_create(tab);
+    lv_label_set_text(s_lbl_battery, "Bateria: leyendo...");
+    lv_obj_align(s_lbl_battery, LV_ALIGN_TOP_MID, 0, 158);
+
+    s_lbl_battery_trend = lv_label_create(tab);
+    lv_label_set_text(s_lbl_battery_trend, "Tendencia: esperando");
+    lv_obj_align(s_lbl_battery_trend, LV_ALIGN_TOP_MID, 0, 184);
+
+    s_lbl_battery_runtime = lv_label_create(tab);
+    lv_label_set_text(s_lbl_battery_runtime, "Autonomia: esperando mediciones");
+    lv_obj_align(s_lbl_battery_runtime, LV_ALIGN_TOP_MID, 0, 210);
+
+    battery_update();
+    s_battery_timer = lv_timer_create(battery_timer_cb, 1000, NULL);
 }
 
 static void brightness_cb(lv_event_t *e)

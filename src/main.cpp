@@ -21,6 +21,7 @@
 #include "weather_ui.h"
 #include "pomodoro_src.h"
 #include "pomodoro_ui.h"
+#include "battery_src.h"
 #if defined(NIGHT_TTF_BENCHMARK)
 #include "night_ui.h"
 #endif
@@ -40,6 +41,7 @@ void setup()
     bsp_display_start_with_config(&cfg);
 
     prefs_init();
+    battery_src_init();
     bsp_display_brightness_set(prefs_get_brightness());
 
     time_src_init();
