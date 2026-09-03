@@ -28,6 +28,10 @@ Tendencia: [flecha o circulo] Descargando
 Autonomia: ~5h 20m  (-15%/h)
 ```
 
+El voltaje y el porcentaje visibles usan una media movil de las quince ultimas
+lecturas validas. Al abrir WIFI se inicia una ventana nueva; durante los
+primeros segundos se promedian las muestras disponibles hasta completar quince.
+
 - Flecha verde hacia arriba: el voltaje subio desde la ultima muestra; es
   indicio de carga, no una señal directa `CHRG` del cargador.
 - Flecha roja hacia abajo: el voltaje bajo.

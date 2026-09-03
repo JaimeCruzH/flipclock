@@ -31,6 +31,14 @@ static lv_obj_t *s_lbl_battery_runtime;
 static lv_timer_t *s_battery_timer;
 static settings_origin_t s_origin = SETTINGS_FROM_CLOCK;
 
+#define BATTERY_DISPLAY_AVERAGE_SIZE 15
+static uint32_t s_battery_voltage_samples[BATTERY_DISPLAY_AVERAGE_SIZE];
+static uint32_t s_battery_percent_samples[BATTERY_DISPLAY_AVERAGE_SIZE];
+static uint32_t s_battery_voltage_sum;
+static uint32_t s_battery_percent_sum;
+static uint8_t s_battery_average_count;
+static uint8_t s_battery_average_next;
+
 static const char *OPT_HORA  = "00\n01\n02\n03\n04\n05\n06\n07\n08\n09\n10\n11\n"
                                "12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23";
 static const char *OPT_MES   = "ENE\nFEB\nMAR\nABR\nMAY\nJUN\n"
@@ -90,6 +98,41 @@ static void kb_ready_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
     lv_obj_add_flag(s_kb, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void battery_average_reset(void)
+{
+    s_battery_voltage_sum = 0;
+    s_battery_percent_sum = 0;
+    s_battery_average_count = 0;
+    s_battery_average_next = 0;
+}
+
+static void battery_average_apply(battery_data_t *data)
+{
+    if (!data || !data->valid) return;
+
+    if (s_battery_average_count == BATTERY_DISPLAY_AVERAGE_SIZE) {
+        s_battery_voltage_sum -= s_battery_voltage_samples[s_battery_average_next];
+        s_battery_percent_sum -= s_battery_percent_samples[s_battery_average_next];
+    } else {
+        s_battery_average_count++;
+    }
+
+    s_battery_voltage_samples[s_battery_average_next] = data->millivolts;
+    s_battery_percent_samples[s_battery_average_next] = data->percent;
+    s_battery_voltage_sum += data->millivolts;
+    s_battery_percent_sum += data->percent;
+
+    s_battery_average_next++;
+    if (s_battery_average_next == BATTERY_DISPLAY_AVERAGE_SIZE) {
+        s_battery_average_next = 0;
+    }
+
+    data->millivolts = s_battery_voltage_sum / s_battery_average_count;
+    data->percent = (uint8_t)
+        ((s_battery_percent_sum + s_battery_average_count / 2) /
+         s_battery_average_count);
 }
 
 static void battery_trend_update(const battery_data_t *data)
@@ -167,6 +210,7 @@ static void battery_update(void)
         return;
     }
 
+    battery_average_apply(&data);
     char text[48];
     snprintf(text, sizeof(text), "Bateria: %d%%  (%u,%02u V)",
              (int)data.percent,
@@ -298,6 +342,7 @@ static void build_tab_wifi(lv_obj_t *tab)
     lv_label_set_text(s_lbl_battery_runtime, "Autonomia: esperando mediciones");
     lv_obj_align(s_lbl_battery_runtime, LV_ALIGN_TOP_MID, 0, 210);
 
+    battery_average_reset();
     battery_update();
     s_battery_timer = lv_timer_create(battery_timer_cb, 1000, NULL);
 }
