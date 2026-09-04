@@ -1,11 +1,12 @@
 # Modo noche y Tiny TTF
 
-Registro de la implementación y de las pruebas realizadas el **2026-08-28**.
+Registro de la implementación y de las pruebas realizadas el **2026-09-04**.
 
 ## Resultado adoptado
 
-El modo noche se probó con Tiny TTF y la pantalla mostró los dígitos nítidos.
-La placa quedó flasheada con la variante `esp32-s3-night-tiny`.
+El modo noche usa Tiny TTF en el perfil de producción `esp32-s3-display` y la
+placa quedó flasheada con ese perfil. La prueba de diagnóstico se mantiene en
+`esp32-s3-night-bench`.
 
 Tiny TTF usa el archivo TTF y lo rasteriza en el dispositivo al tamaño elegido.
 No se habilitó FreeType ni un renderizador SVG. La fuente usada es la misma
@@ -15,12 +16,12 @@ familia visual Montserrat que ya estaba disponible en:
 vendor/lvgl9/scripts/built_in_font/Montserrat-Medium.ttf
 ```
 
-El repositorio conserva dos perfiles de compilación para poder identificar el
-coste de la alternativa:
+El repositorio conserva un perfil de producción y perfiles auxiliares:
 
-- `esp32-s3-display`: perfil normal, sin Tiny TTF.
-- `esp32-s3-night-tiny`: perfil de prueba, con `NIGHT_TTF_USE=1` y
+- `esp32-s3-display`: perfil de producción, con `NIGHT_TTF_USE=1` y
   `LV_USE_TINY_TTF=1`.
+- `esp32-s3-night-bench`: perfil de diagnóstico, con Tiny TTF e instrumentación.
+- `esp32-s3-night-tiny`: perfil compatible de prueba que conserva esos flags.
 
 ## Funcionalidad del modo noche
 
@@ -70,14 +71,12 @@ flash es el de la región de aplicación reportada por PlatformIO.
 
 | Perfil | RAM estática | Flash | Observación |
 |---|---:|---:|---|
-| `esp32-s3-display` | 51.064 B (15,6%) | 4.043.738 B (61,7%) | Bitmap existente, sin Tiny TTF |
-| `esp32-s3-night-tiny` | 51.096 B (15,6%) | 4.304.774 B (65,7%) | Tiny TTF y pruebas de benchmark |
+| `esp32-s3-display` | 51.616 B (15,8%) | 4.319.010 B (65,9%) | Producción con Tiny TTF |
+| `esp32-s3-night-bench` | 51.640 B (15,8%) | 4.319.498 B (65,9%) | Tiny TTF e instrumentación |
 
-La diferencia medida es de **+32 B de RAM estática** y **+261.036 B de
-flash**, aproximadamente **6,46%** respecto del perfil normal. El archivo TTF
-aporta `243.180 B`; el resto corresponde al motor Tiny TTF y a la
-instrumentación del perfil de prueba. La RAM estática del enlazado no mide toda
-la caché dinámica de glifos que Tiny TTF puede reservar durante el uso.
+La RAM estática del enlazado no mide toda la caché dinámica de glifos que Tiny
+TTF puede reservar durante el uso. El perfil de diagnóstico agrega la
+instrumentación del benchmark sobre la misma configuración de producción.
 
 La variante bitmap es más rápida y predecible porque sus glifos ya están
 convertidos a píxeles. Su tamaño es fijo: ampliar la fuente bitmap de 48 px
@@ -90,47 +89,48 @@ decisión adoptada.
 
 ## Pruebas realizadas
 
-### Compilación normal
+### Compilación de producción
 
 ```powershell
-& 'C:\Users\jaime\.platformio\penv\Scripts\python.exe' -m platformio run -e esp32-s3-display
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+& $projectPython -m platformio run -e esp32-s3-display
 ```
 
-Resultado: código `0`, `firmware.elf` generado.
+Resultado verificado: código `0`, `firmware.elf` generado, 51.616 B de RAM
+estática y 4.319.010 B de flash de aplicación.
 
-### Compilación y carga Tiny TTF
+### Diagnóstico y carga de producción
 
 ```powershell
-& 'C:\Users\jaime\.platformio\penv\Scripts\python.exe' -m platformio run -e esp32-s3-night-tiny
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+& $projectPython -m platformio run -e esp32-s3-night-bench
 
 $env:PYTHONIOENCODING='utf-8'
 $env:PYTHONUTF8='1'
-& 'C:\Users\jaime\.platformio\penv\Scripts\python.exe' -m platformio run -e esp32-s3-night-tiny -t upload --upload-port COM8
+& $projectPython -m platformio run -e esp32-s3-display -t upload --upload-port COM8
 ```
 
-Resultado: código `0`, hash verificado y reinicio por RTS en `COM8`.
+Resultado verificado: ambos builds terminaron con código `0`; la carga de
+producción verificó el hash de cada imagen y reinició por RTS en `COM8`.
 
-La prueba serie de apertura devolvió:
+La prueba serie de apertura devolvió `flipclock: listo`. En el firmware de
+diagnóstico se entró al modo Noche y luego se envió `r`; no apareció el error de
+respaldo bitmap y el comando respondió correctamente.
 
-```text
-[bench] ttf_size=171 ttf_line=208
-```
-
-La pantalla fue inspeccionada y los números se vieron nítidos. El comando de
-diagnóstico de rendimiento no devolvió una medición fiable después del primer
-render de Noche; por tanto, no se afirma aquí un porcentaje de CPU. Las cifras
-de flash y RAM anteriores sí son resultados de compilación reproducibles.
+Los símbolos `lv_tiny_ttf` y `night_font_ttf` están presentes en el ELF de
+producción. La confirmación visual final debe hacerse mirando la pantalla al
+activar Noche; la consola no captura píxeles.
 
 ## Archivos involucrados
 
 - `src/night_ui.c` y `src/night_ui.h`: pantalla, temporizadores, salida por
   pulsación larga y selección de fuente.
 - `src/assets/night_font.S` y `src/assets/night_font.h`: inclusión del TTF en
-  flash solo en la variante Tiny TTF.
+  flash en los perfiles que usan Tiny TTF.
 - `src/settings_ui.c`: botón, roller y disposición de la pestaña `PANTALLA`.
 - `src/prefs.cpp` y `src/prefs.h`: persistencia y límites del brillo nocturno.
 - `src/lv_conf.h`: configuración Tiny TTF sobreescribible por flags de build.
-- `platformio.ini`: perfiles normal, benchmark y Tiny TTF.
+- `platformio.ini`: perfil de producción, benchmark y alias Tiny TTF.
 - `src/lv_port.c`, `src/lv_port.h` y `src/main.cpp`: instrumentación aislada
   bajo `NIGHT_TTF_BENCHMARK`.
 

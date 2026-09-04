@@ -5,6 +5,8 @@
 #include "prefs.h"
 #include "time_src.h"
 
+#include "esp_log.h"
+
 #include <lvgl.h>
 #include <stdio.h>
 
@@ -15,7 +17,6 @@
 #if defined(NIGHT_TTF_BENCHMARK)
 #include "lv_port.h"
 #include "esp_heap_caps.h"
-#include "esp_log.h"
 #include "esp_timer.h"
 #include <inttypes.h>
 #endif
@@ -31,11 +32,6 @@
 #define NIGHT_SCREEN_WIDTH       480
 #define NIGHT_SCREEN_HEIGHT      320
 #endif
-#if !defined(NIGHT_TTF_USE) || !NIGHT_TTF_USE
-#define NIGHT_TEXT_SCALE_X       ((15 * LV_SCALE_NONE) / 4)
-#define NIGHT_TEXT_SCALE_Y       (8 * LV_SCALE_NONE)
-#endif
-
 static lv_obj_t  *s_screen;
 static lv_obj_t  *s_time;
 static lv_timer_t *s_exit_timer;
@@ -181,21 +177,17 @@ static void create_screen(void)
         lv_obj_set_height(s_time, lv_font_get_line_height(s_ttf_font));
         lv_obj_set_style_text_font(s_time, s_ttf_font, 0);
     } else {
+        ESP_LOGE("NIGHT", "Tiny TTF no pudo inicializarse; usando respaldo bitmap sin escalado");
         lv_obj_set_size(s_time, 160, 52);
         lv_obj_set_style_text_font(s_time, &lv_font_montserrat_48, 0);
     }
 #else
+    ESP_LOGE("NIGHT", "Tiny TTF esta deshabilitado; usando respaldo bitmap sin escalado");
     lv_obj_set_size(s_time, 160, 52);
     lv_obj_set_style_text_font(s_time, &lv_font_montserrat_48, 0);
 #endif
     lv_obj_set_style_text_color(s_time, lv_color_white(), 0);
     lv_obj_set_style_text_align(s_time, LV_TEXT_ALIGN_CENTER, 0);
-#if !defined(NIGHT_TTF_USE) || !NIGHT_TTF_USE
-    lv_obj_set_style_transform_pivot_x(s_time, 80, 0);
-    lv_obj_set_style_transform_pivot_y(s_time, 26, 0);
-    lv_obj_set_style_transform_scale_x(s_time, NIGHT_TEXT_SCALE_X, 0);
-    lv_obj_set_style_transform_scale_y(s_time, NIGHT_TEXT_SCALE_Y, 0);
-#endif
     lv_label_set_text(s_time, "00:00");
     lv_obj_align(s_time, LV_ALIGN_CENTER, 0, 0);
 

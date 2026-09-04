@@ -93,8 +93,10 @@ nombre con el geocoding de Open-Meteo y guardado en NVS).
 Desde **PowerShell**, nunca Git Bash:
 
 ```powershell
-$env:PIP_CERT="C:\Claude\PROJECTS\ESP32\win-ca-bundle.pem"
+$projectRoot = (Resolve-Path .).Path
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+$caBundle = Join-Path (Split-Path $projectRoot -Parent) 'win-ca-bundle.pem'
+$env:PIP_CERT=$caBundle
 $env:SSL_CERT_FILE=$env:PIP_CERT; $env:REQUESTS_CA_BUNDLE=$env:PIP_CERT
-& "C:\Claude\PROJECTS\ESP32\.venv\Scripts\python.exe" -m platformio run `
-    -d C:\Claude\PROJECTS\ESP32\flipclock -t upload
+& $projectPython -m platformio run -d $projectRoot -t upload
 ```

@@ -1,4 +1,4 @@
-/* Solo se incluye en la variante de prueba Tiny TTF. */
+/* Se incluye en los perfiles que usan Tiny TTF. */
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
     .section .rodata.night_font,"a",@progbits
     .global night_font_ttf

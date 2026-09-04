@@ -1,43 +1,52 @@
 # Entorno de desarrollo, compilacion y carga
 
 Guia operativa del proyecto `flipclock`. La ultima verificacion de las rutas,
-versiones y comandos de esta guia se hizo el **2026-09-03**.
+versiones y comandos de esta guia se hizo el **2026-09-04**.
 
 La guia vive dentro del repositorio para que un clon de GitHub indique donde
 estan las herramientas y que hacer cuando una instalacion local no funciona.
 
 ## 1. Mapa de rutas
 
-Todas las rutas siguientes corresponden a la maquina de desarrollo actual.
+Las rutas del repositorio son relativas a su raiz. Desde PowerShell, obtener la
+raiz real antes de ejecutar comandos:
 
-| Recurso | Ruta o ubicacion | Estado |
+```powershell
+$projectRoot = (Resolve-Path .).Path
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+$workspaceRoot = Split-Path $projectRoot -Parent
+$caBundle = Join-Path $workspaceRoot 'win-ca-bundle.pem'
+$factoryBackup = Join-Path $workspaceRoot 'backup\factory_full_16MB.bin'
+```
+
+| Recurso | Ruta valida | Estado |
 |---|---|---|
-| Proyecto | `C:\Claude\PROJECTS\ESP32\flipclock` | Repositorio Git |
+| Proyecto | `.` / `$projectRoot` | Versionado |
 | Configuracion de PlatformIO | `platformio.ini` | Versionada; fuente de verdad del build |
 | Codigo de aplicacion y BSP | `src/` | Versionado |
 | LVGL usado por este proyecto | `vendor/lvgl9/` | Local, ignorado por Git; se regenera |
+| Fuente TTF usada por Noche | `vendor/lvgl9/scripts/built_in_font/Montserrat-Medium.ttf` | Local, generada junto con LVGL |
 | Manifest parcheado de LVGL | `vendor/lvgl9-library.json` | Versionado; necesario para compilar |
 | Script para traer LVGL | `tools/setup_lvgl.py` | Versionado |
 | Assets embebidos | `src/assets/` | Versionados |
 | Generador de assets | `tools/gen_assets.py` | Versionado |
 | Artefactos de compilacion | `.pio/` | Local, ignorado por Git |
-| Entorno Python de PlatformIO | `C:\Claude\PROJECTS\ESP32\.venv` | Local, fuera del repo |
-| Python base del entorno | `C:\Users\jaime\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe` | Existe en la maquina; lo necesita `.venv` |
-| Certificados para el proxy TLS | `C:\Claude\PROJECTS\ESP32\win-ca-bundle.pem` | Local, fuera del repo |
-| Respaldo de fabrica | `C:\Claude\PROJECTS\ESP32\backup\factory_full_16MB.bin` | No borrar |
+| Python de PlatformIO | `$projectPython` | Local; verificado en esta maquina |
+| Certificado del proxy | `$caBundle` | Auxiliar local; no se versiona |
+| Respaldo de fabrica | `$factoryBackup` | Auxiliar local; no se versiona |
 
-El directorio padre tambien contiene proyectos de prueba (`lvgl9_test`,
-`lvgl_test` y `test_suite`) y el codigo original del fabricante en `vendor/`.
-No son dependencias que PlatformIO deba mezclar con este proyecto: para
-`flipclock` se usa exclusivamente `vendor/lvgl9/`.
+`vendor/lvgl9/`, `.pio/` y `preview/` son rutas locales generadas. No deben
+subirse a GitHub. El certificado y el respaldo son opcionales para un clon:
+solo se necesitan para descargas detrás del proxy y restauración de fábrica.
+No se usan otras copias de LVGL, proyectos hermanos ni rutas absolutas.
 
 ## 2. Versiones verificadas
 
 El entorno funcional esta en:
 
-- Python 3.11.15.
+- Python 3.11.7.
 - PlatformIO Core 6.1.19, ejecutado como modulo Python.
-- esptool 5.3.1 disponible en el entorno Python.
+- `tool-esptoolpy` 5.0.0-dev1, gestionado por PlatformIO durante la carga.
 - Plataforma pioarduino `54.03.21`.
 - Arduino-ESP32 3.2.1 sobre ESP-IDF 5.4.x.
 - LVGL 9.5.0.
@@ -53,9 +62,9 @@ PlatformIO puede mostrar el identificador generico `ESP32-S3-DevKitC-1-N8
 
 ## 3. Que se versiona y que se regenera
 
-El `.gitignore` del proyecto excluye deliberadamente `.venv/`, `.pio/`,
-`vendor/lvgl9/` y `preview/`. Por tanto, un upload a GitHub no debe contener
-el entorno Python ni la copia local de LVGL; no hay que buscarlos en GitHub.
+El `.gitignore` del proyecto excluye deliberadamente `.pio/`, `vendor/lvgl9/` y
+`preview/`. Por tanto, un upload a GitHub no debe contener los artefactos de
+compilacion ni la copia local de LVGL.
 
 Despues de clonar el repositorio:
 
@@ -78,56 +87,32 @@ Usar **PowerShell nativo de Windows**, no Git Bash ni MSYS/Mingw. Desde la
 raiz del proyecto:
 
 ```powershell
-$projectDir = "C:\Claude\PROJECTS\ESP32\flipclock"
-$projectPython = "C:\Claude\PROJECTS\ESP32\.venv\Scripts\python.exe"
-$pythonBase = "C:\Users\jaime\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe"
+$projectRoot = (Resolve-Path .).Path
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
 
-Set-Location $projectDir
 Test-Path $projectPython
-Test-Path $pythonBase
 & $projectPython --version
 & $projectPython -m platformio --version
-& $projectPython -m esptool version
+& $projectPython -m platformio pkg list -e esp32-s3-display
 ```
 
-La comprobacion verificada devuelve Python 3.11.15, PlatformIO 6.1.19 y
-esptool 5.3.1. El Python alternativo de
-`C:\Users\jaime\AppData\Local\hermes\hermes-agent\venv` funciona, pero no
-contiene PlatformIO; sirve como diagnostico, no como entorno del proyecto.
-
-Si aparece `No Python at ...` al ejecutar `.venv`, comprobar primero que el
-Python base exista y ejecutar desde PowerShell nativo. En esta maquina el
-mensaje aparecio inicialmente porque el entorno restringido no podia acceder
-al interprete base; no significaba que GitHub hubiera borrado los archivos.
-
-### Reparar el entorno solo si la comprobacion falla
-
-No reinstalar nada si los tres comandos de version funcionan. Si el Python
-base existe pero los lanzadores de `.venv` estan dañados, reparar el entorno
-sin tocar el repositorio:
-
-```powershell
-$envDir = "C:\Claude\PROJECTS\ESP32\.venv"
-& $pythonBase -m venv --upgrade $envDir
-& "$envDir\Scripts\python.exe" -m pip install "platformio==6.1.19" "esptool==5.3.1"
-```
-
-Definir antes las variables de certificados de la seccion siguiente si el
-comando necesita descargar paquetes. Si PlatformIO vuelve a mostrar el error
-de `click` sobre `ParamType.get_metavar`, fijar `click==8.1.8` dentro de este
-mismo entorno. No instalar PlatformIO globalmente ni sustituir el Python base
-si el entorno local ya pasa la comprobacion.
+La comprobacion verificada devuelve `True`, Python 3.11.7, PlatformIO Core
+6.1.19 y una unica libreria declarada por el proyecto: LVGL 9.5.0.
+`tool-esptoolpy` aparece como herramienta de PlatformIO, no como modulo Python
+independiente.
 
 ## 5. Certificados y descargas
 
-La red de desarrollo intercepta TLS. Antes de cualquier descarga de PlatformIO,
-LVGL o paquetes Python, definir el CA bundle corporativo:
+La red de desarrollo intercepta TLS. Antes de cualquier descarga de PlatformIO
+o LVGL, usar el certificado local solo si existe:
 
 ```powershell
-$caBundle = "C:\Claude\PROJECTS\ESP32\win-ca-bundle.pem"
-$env:PIP_CERT = $caBundle
-$env:SSL_CERT_FILE = $caBundle
-$env:REQUESTS_CA_BUNDLE = $caBundle
+$caBundle = Join-Path (Split-Path $projectRoot -Parent) 'win-ca-bundle.pem'
+if (Test-Path $caBundle) {
+    $env:PIP_CERT = $caBundle
+    $env:SSL_CERT_FILE = $caBundle
+    $env:REQUESTS_CA_BUNDLE = $caBundle
+}
 ```
 
 No usar Git Bash para instalar el toolchain: pioarduino rechaza MSYS/Mingw
@@ -144,8 +129,8 @@ Con las variables de certificados definidas:
 
 El ultimo build verificado genero correctamente `firmware.elf` y uso:
 
-- RAM: 51.480 de 327.680 bytes (15,7 %).
-- Flash de aplicacion: 4.058.074 de 6.553.600 bytes (61,9 %).
+- RAM: 51.616 de 327.680 bytes (15,8 %).
+- Flash de aplicacion: 4.319.010 de 6.553.600 bytes (65,9 %).
 
 No considerar suficiente el mensaje `Successfully created ESP32S3 image.`:
 puede corresponder solo al bootloader. La validacion real es el codigo de
@@ -174,10 +159,8 @@ Una carga valida termina con `[SUCCESS]`, `Hash of data verified` para cada
 imagen y `Hard resetting via RTS pin`. El texto `Connected to ESP32-S3` por si
 solo no confirma que el firmware se haya escrito completo.
 
-En esta maquina el primer intento de carga se bloqueo por un
-`UnicodeEncodeError` de cp1252 al imprimir la barra de progreso. Repetir con
-`PYTHONIOENCODING=utf-8` y `PYTHONUTF8=1` resolvio el problema; la segunda carga
-escribio 4.058.480 bytes, verifico el hash y termino correctamente.
+La carga de produccion verificada escribio 4.319.408 bytes, verifico el hash de
+cada imagen y termino correctamente con reinicio por RTS.
 
 ## 8. Monitor serie
 
@@ -196,11 +179,11 @@ ausencia de texto no demuestra por si sola que la pantalla no haya arrancado.
 La comprobacion independiente es:
 
 ```powershell
-& $projectPython -m esptool --port COM8 chip-id
+& $projectPython -m platformio device list
 ```
 
-El ESP32-S3 no tiene un chip ID numerico en esptool 5; el comando confirma la
-respuesta leyendo la MAC.
+La lista debe mostrar `COM8` con USB VID:PID `303A:1001`. La carga usa la
+version de `tool-esptoolpy` administrada por PlatformIO.
 
 ## 9. Ajustes de hardware que no se deben quitar
 
@@ -227,30 +210,45 @@ tabla de particiones de 16 MB y producir otro bucle de arranque. Quitar
 
 ## 10. Librerias y puntos de entrada
 
-- `platformio.ini`: entorno, plataforma, framework, memoria, puerto y
-  dependencias.
-- `vendor/lvgl9/`: LVGL 9.5.0 local, no versionado.
-- `vendor/lvgl9-library.json`: manifest parcheado con `srcDir` y `srcFilter`;
-  debe conservarse.
-- `src/lv_port.c` y `src/lv_port.h`: port de LVGL y flush al ST77922.
-- `src/esp_lcd_st77922.*`: driver del panel.
-- `src/esp_lcd_touch.*`: tactil.
-- `src/esp_bsp.*`: inicializacion de placa y brillo.
-- `src/clock_ui.c`, `src/weather_ui.c` y `src/pomodoro_ui.c`: pantallas.
-- `src/battery_src.c` y `src/battery_src.h`: lectura de `GPIO8`, muestreo cada
-  10 min, tendencia y autonomia estimada.
-- `src/weather_src.cpp`: datos y API meteorologica.
-- `src/assets/` y `tools/gen_assets.py`: sprites.
+### Librerias que si sirven
 
-Para un cambio de UI, empezar en el `*_ui.c` correspondiente. Para cambios
-de compilacion o librerias, empezar en `platformio.ini`, `vendor/` y
-`tools/setup_lvgl.py` antes de tocar el codigo de aplicacion.
+| Dependencia | Donde se declara | Uso comprobado |
+|---|---|---|
+| LVGL 9.5.0 | `lib_deps = symlink://./vendor/lvgl9` | UI, display, tactil y Tiny TTF |
+| Arduino-ESP32 3.2.1 | `framework = arduino` | `Arduino.h`, `Preferences`, WiFi, HTTP y cJSON |
+| Componentes ESP-IDF/FreeRTOS | incluidos por Arduino-ESP32 | GPIO, ADC, I2C, SPI, LCD, tareas y semaforos |
+| Pillow y numpy | imports de `tools/gen_assets.py` | Solo regeneracion de sprites en el PC |
+
+El resultado de `platformio pkg list -e esp32-s3-display` confirma que la
+unica libreria declarada por el proyecto es LVGL 9.5.0. `Preferences`, `WiFi`,
+`HTTPClient`, `WiFiClientSecure`, `cJSON` y FreeRTOS vienen del framework y no
+deben duplicarse como `lib_deps`.
+
+### Componentes que se conservan
+
+- `platformio.ini`: entornos, plataforma, framework, memoria, puerto y
+  dependencias.
+- `vendor/lvgl9/`: copia local de LVGL; la recrea `tools/setup_lvgl.py` y no se
+  versiona.
+- `vendor/lvgl9-library.json`: manifest parcheado; debe conservarse.
+- `src/lv_port.*`, `src/esp_lcd_st77922.*`, `src/esp_lcd_touch.*` y
+  `src/esp_bsp.*`: display, tactil y placa.
+- `src/*_ui.*`, `src/*_src.*`, `src/assets/` y `tools/`: funcionalidad de la
+  aplicacion y generacion de recursos.
+
+No existen `lib/` ni `include/`, y no hay entradas `lib_deps` sin uso que
+eliminar. No se borra `vendor/lvgl9/`: es la unica dependencia de libreria que
+el build necesita.
+
+Para un cambio de UI, empezar en el `*_ui.c` correspondiente. Para cambios de
+compilacion o librerias, empezar en `platformio.ini`, `vendor/lvgl9-library.json`
+y `tools/setup_lvgl.py` antes de tocar el codigo de aplicacion.
 
 ## 11. Problemas conocidos
 
 | Sintoma | Causa o solucion |
 |---|---|
-| `No Python at ...` | Verificar el Python base y usar PowerShell nativo; `.venv` depende de el. |
+| `No Python at ...` | Verificar `Test-Path $projectPython` y usar el entorno derivado de `$env:USERPROFILE`. |
 | `MSys/Mingw is not supported` | Se ejecuto PlatformIO desde Git Bash; cambiar a PowerShell. |
 | `CERTIFICATE_VERIFY_FAILED` | Definir las tres variables de certificado de la seccion 5. |
 | `ParamType.get_metavar() ... ctx` | Version incompatible de `click`; el entorno historico requiere `click==8.1.8`. |
@@ -262,28 +260,32 @@ de compilacion o librerias, empezar en `platformio.ini`, `vendor/` y
 
 ## 12. Respaldo y restauracion de fabrica
 
-El respaldo esta fuera del repositorio para no inflarlo:
+El respaldo esta fuera del repositorio para no inflarlo. Resolverlo desde la
+raiz del proyecto:
 
-```text
-C:\Claude\PROJECTS\ESP32\backup\factory_full_16MB.bin
+```powershell
+$factoryBackup = Join-Path (Split-Path $projectRoot -Parent) 'backup\factory_full_16MB.bin'
+$factoryRestore = Join-Path (Split-Path $projectRoot -Parent) 'backup\restore_factory.ps1'
+Test-Path $factoryBackup
+Test-Path $factoryRestore
 ```
 
-Datos verificados:
+En la maquina de desarrollo ambas rutas devuelven `True`. Datos verificados:
 
 - Tamano: 16.777.216 bytes.
 - SHA-256: `FCC55C4E70A93709AE8F60F244BA8391E6734B120767295577119F6AC0A3478D`.
-- Script de restauracion: `C:\Claude\PROJECTS\ESP32\backup\restore_factory.ps1`.
+- Script de restauracion: `$factoryRestore`.
 - Puerto de restauracion: `COM8`.
 
 Comprobar el hash antes de cualquier restauracion:
 
 ```powershell
 Get-FileHash `
-  "C:\Claude\PROJECTS\ESP32\backup\factory_full_16MB.bin" `
+  $factoryBackup `
   -Algorithm SHA256
 ```
 
-No borrar este respaldo al limpiar `.pio/` o al reparar `.venv`.
+No borrar este respaldo al limpiar `.pio/`.
 
 ## 13. Flujo recomendado para futuros cambios
 
@@ -298,4 +300,4 @@ cargar.
 5. Compilar el entorno `esp32-s3-display`.
 6. Verificar `COM8`, cerrar el monitor y cargar con UTF-8.
 7. Confirmar hashes, reinicio y respuesta del chip.
-8. Revisar `git status` para no incluir `.pio/`, `.venv/` ni `vendor/lvgl9/`.
+8. Revisar `git status` para no incluir `.pio/`, `preview/` ni `vendor/lvgl9/`.

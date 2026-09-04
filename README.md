@@ -18,10 +18,12 @@ documenta esa entrada.
 ## Cómo compilar
 
 **1. Traer LVGL.** La copia de LVGL (99 MB de código de terceros) no está en el
-repositorio; se descarga con:
+repositorio; desde la raíz del proyecto se descarga con el Python funcional de
+PlatformIO:
 
-```
-python tools/setup_lvgl.py
+```powershell
+$projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+& $projectPython tools/setup_lvgl.py
 ```
 
 Esto crea `vendor/lvgl9` y le coloca el `library.json` parcheado que sí está
@@ -29,11 +31,11 @@ versionado (`vendor/lvgl9-library.json`): sin él PlatformIO no compila los
 fuentes de la librería.
 
 **2. Compilar y flashear.** Ajusta `upload_port` / `monitor_port` en
-`platformio.ini` a tu puerto COM y lanza:
+`platformio.ini` a tu puerto COM y lanza el perfil de producción:
 
-```
-pio run -t upload
-pio device monitor
+```powershell
+& $projectPython -m platformio run -e esp32-s3-display -t upload
+& $projectPython -m platformio device monitor
 ```
 
 > Notas del entorno del autor (Windows, red con proxy TLS): compilar siempre
@@ -41,13 +43,17 @@ pio device monitor
 > / `REQUESTS_CA_BUNDLE` apuntando al CA bundle corporativo, o PlatformIO no
 > puede descargar el toolchain.
 
-Ocupación del perfil normal: **flash 4,06 MB de 6,55 MB** (61,9%), **RAM 15,7%**.
-La variante experimental Tiny TTF usa 4,30 MB (65,7%); sus mediciones y el
-procedimiento están en [`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
+Ocupación del perfil de producción: **flash 4,32 MB de 6,55 MB** (65,9%),
+**RAM 15,8%**. Tiny TTF queda activado en el firmware que se carga normalmente;
+sus mediciones y el procedimiento están en
+[`docs/MODO_NOCHE_TINY_TTF.md`](docs/MODO_NOCHE_TINY_TTF.md).
 
-Para las rutas exactas del entorno, versiones instaladas, recuperación del
-`.venv`, problemas conocidos y procedimiento de carga en `COM8`, ver
+Para las rutas válidas del entorno, versiones instaladas, problemas conocidos
+y procedimiento de carga en `COM8`, ver
 [`docs/ENTORNO_DESARROLLO.md`](docs/ENTORNO_DESARROLLO.md).
+
+El inventario de cambios, rutas válidas y dependencias verificadas está en
+[`docs/CAMBIOS.md`](docs/CAMBIOS.md).
 
 ## Regenerar los sprites
 

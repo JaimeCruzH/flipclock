@@ -44,14 +44,10 @@ repararla a mano.
 
 ### 2. Heredoc que se come el resto del fichero (5 veces)
 
-```
-/usr/bin/bash: -c: line 145: unexpected EOF while looking for matching `''
-```
-
 Un heredoc largo con comillas, backticks o `EOF` dentro del contenido se corta o
 se traga lo que viene detrás. Es el "el editor cortaba la información": el
 fichero queda escrito **a medias** y sin aviso. Ocurrió escribiendo
-`gen_assets.py` y `Graficos_LVGL_tactil.md`, ambos ficheros largos.
+`gen_assets.py` y un documento largo.
 
 - **Remedio:** `Write` para el fichero entero. No hay límite de comillas ni de
   contenido.
@@ -89,15 +85,11 @@ válido. Contar líneas a ojo se equivoca en uno con facilidad.
 
 ### 6. El `cd` que sobrevive entre llamadas (4 veces)
 
-El directorio de trabajo de la herramienta `Bash` **persiste**. Un `cd vendor/lvgl9`
-en una llamada deja la siguiente perdida:
+El directorio de trabajo de una terminal puede no coincidir con la raíz del
+proyecto entre comandos.
 
-```
-ls: cannot access 'vendor/': No such file or directory
-```
-
-- **Remedio:** rutas absolutas, o `cd /c/Claude/PROJECTS/ESP32/flipclock &&` al
-  principio de cada comando.
+- **Remedio:** fija siempre `workdir` en la herramienta o define
+  `$projectRoot = (Resolve-Path .).Path` al principio de cada bloque de PowerShell.
 
 ### 7. Comprobar después de escribir
 
@@ -114,24 +106,24 @@ fichero, léelo o valídalo con la herramienta que corresponda:
 
 ## Entorno de esta máquina
 
-- **Python:** usa siempre `C:\Claude\PROJECTS\ESP32\.venv\Scripts\python.exe`.
-  El `python` que ve Git Bash está roto (9 veces:
-  `api-ms-win-crt-heap-l1-1-0.dll: cannot open shared object file`), y `pio` no
-  está en el PATH: hay que invocarlo como `python -m platformio`.
+- **Python:** usa el entorno funcional de PlatformIO, derivado de
+  `$env:USERPROFILE`: `Join-Path $env:USERPROFILE
+  '.platformio\penv\Scripts\python.exe'`. `pio` no está en el PATH: invócalo
+  como `& $projectPython -m platformio`.
 - **Compilar desde PowerShell, nunca desde Git Bash**, y con `PIP_CERT`,
   `SSL_CERT_FILE` y `REQUESTS_CA_BUNDLE` apuntando a
-  `C:\Claude\PROJECTS\ESP32\win-ca-bundle.pem`. El proxy TLS de esta red rompe
-  las descargas de PlatformIO.
-- **PowerShell:** no manipules `$env:Path` con `+=` en un comando compuesto (el
-  guardia de seguridad lo bloquea al ver `C:\Program`). Invoca el ejecutable por
-  su ruta completa con el operador `&`.
+  la ruta local verificada por `Test-Path` en la guía de entorno. El proxy TLS de
+  esta red rompe las descargas de PlatformIO.
+- **PowerShell:** no manipules `$env:Path` con `+=` en un comando compuesto.
+  Invoca el ejecutable por su ruta completa con el operador `&`.
 - **Git:** el repo está en `autocrlf` de Windows y `.gitattributes` fija
   `eol=lf`. Los avisos de CRLF al hacer `git add` son normales y no indican
   corrupción.
 
 ## El proyecto
 
-- `vendor/lvgl9/` no está versionado; se recrea con `python tools/setup_lvgl.py`.
+- `vendor/lvgl9/` no está versionado; se recrea con
+  `& $projectPython tools/setup_lvgl.py`.
 - Los sprites de `src/assets/` sí están versionados. Se regeneran con
   `python tools/gen_assets.py --emit`, y `--preview` escribe PNGs en `preview/`
   sin tocar la placa. El generador es determinista: misma entrada, mismos bytes.
