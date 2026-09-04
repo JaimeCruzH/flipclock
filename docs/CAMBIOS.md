@@ -1,8 +1,26 @@
 # Registro de cambios, rutas y dependencias
 
 Ultima actualizacion: **2026-09-04**. Este documento resume la integracion de
-bateria, la reparacion del modo Noche y la limpieza documental realizada en el
-repositorio.
+bateria, la reparacion del modo Noche, el apagado por deep sleep y la limpieza
+documental realizada en el repositorio.
+
+## Apagado y despertar por RESET
+
+Se incorporo el apagado por deep sleep desde **ajustes -> HORA**. El flujo
+conserva el boton **BOOT/GPIO0** para programacion y usa **RESET/EN** como
+reinicio externo para volver a iniciar el reloj.
+
+- `src/settings_ui.c`: boton **Apagar** en la barra inferior de la pestana
+  **HORA**, junto a **Guardar** y **Cancelar**, con confirmacion previa.
+- `src/power_manager.cpp` y `src/power_manager.h`: guardado del estado del
+  Pomodoro, apagado de WiFi, backlight y panel, y entrada en deep sleep.
+- `src/esp_bsp.c` y `src/esp_bsp.h`: preparacion del panel y backlight antes
+  del sleep.
+- `src/pomodoro_src.cpp` y `src/pomodoro_src.h`: persistencia del tiempo
+  restante antes de dormir.
+
+La prueba en hardware confirmo que **Apagar** apaga la pantalla y que pulsar
+**RESET** vuelve a iniciar el dispositivo correctamente.
 
 ## Cambios de bateria
 
@@ -108,7 +126,7 @@ del framework impediria compilar.
 & $projectPython -m platformio run -e esp32-s3-display -t upload --upload-port COM8
 ```
 
-Resultados: ambos builds terminaron con `SUCCESS`; produccion usa 51.616 B de
-RAM estatica y 4.319.010 B de flash de aplicacion; la carga en `COM8` verifico
-los hashes y reinicio por RTS. La consola devolvio `flipclock: listo` y los
-comandos `t` y `f` respondieron.
+Resultados: ambos builds terminaron con `SUCCESS`; la compilacion final de
+produccion usa 51.688 B de RAM estatica y 4.327.242 B de flash de aplicacion;
+la carga final en `COM8` verifico el hash y reinicio por RTS. La consola
+devolvio `flipclock: listo` y los comandos `t` y `f` respondieron.

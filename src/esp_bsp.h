@@ -99,6 +99,7 @@ lv_display_t *bsp_display_start_with_config(const bsp_display_cfg_t *cfg);
 esp_err_t bsp_display_brightness_set(int brightness_percent);
 esp_err_t bsp_display_backlight_on(void);
 esp_err_t bsp_display_backlight_off(void);
+esp_err_t bsp_display_prepare_sleep(void);
 
 /**
  * Gira la imagen 180 grados en caliente, para montar la placa del otro lado.

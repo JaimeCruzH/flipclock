@@ -170,6 +170,9 @@ para que viaje con la hoja en vez de quedarse fija en la escena.
   - **PANTALLA** — brillo (0-100 %), giro de 180° y modo **Noche** con roller de
     brillo nocturno (1-20 %, por defecto 3 %).
   - **POMO** — trabajo, descansos, bloques por ciclo y reanudación tras reinicio.
+- En **ajustes → HORA**, el botón **Apagar** confirma y entra en deep sleep;
+  el botón físico **RESET/EN** vuelve a iniciar el dispositivo. **BOOT/GPIO0**
+  conserva su función de programación y no se usa como despertador.
 - Un punto verde tenue abajo a la derecha indica WiFi conectado.
 - Formato **24 horas**.
 - Zona horaria: **America/Santiago** (Chile continental), cadena POSIX

@@ -7,6 +7,7 @@
 #include "pomodoro_ui.h"
 #include "pomodoro_src.h"
 #include "battery_src.h"
+#include "power_manager.h"
 
 #include <lvgl.h>
 #include <stdio.h>
@@ -29,7 +30,10 @@ static lv_obj_t *s_lbl_battery;
 static lv_obj_t *s_lbl_battery_trend;
 static lv_obj_t *s_lbl_battery_runtime;
 static lv_timer_t *s_battery_timer;
+static lv_timer_t *s_sleep_timer;
 static settings_origin_t s_origin = SETTINGS_FROM_CLOCK;
+
+static const char POWER_CONFIRM_TOKEN = 0;
 
 #define BATTERY_DISPLAY_AVERAGE_SIZE 15
 static uint32_t s_battery_voltage_samples[BATTERY_DISPLAY_AVERAGE_SIZE];
@@ -68,6 +72,49 @@ static void close_cb(lv_event_t *e)
     else                                    clock_ui_show();
     lv_obj_delete_async(s_scr);
     s_scr = NULL;
+}
+
+static void enter_sleep_cb(lv_timer_t *timer)
+{
+    LV_UNUSED(timer);
+    s_sleep_timer = NULL;
+    power_manager_enter_deep_sleep();
+}
+
+static void power_dialog_cb(lv_event_t *e)
+{
+    lv_obj_t *button = lv_event_get_current_target_obj(e);
+    lv_obj_t *mbox = lv_obj_get_parent(lv_obj_get_parent(button));
+
+    if (lv_event_get_user_data(e) == &POWER_CONFIRM_TOKEN) {
+        lv_msgbox_close(mbox);
+        if (!s_sleep_timer) {
+            s_sleep_timer = lv_timer_create(enter_sleep_cb, 250, NULL);
+            if (s_sleep_timer) lv_timer_set_repeat_count(s_sleep_timer, 1);
+        }
+    } else {
+        lv_msgbox_close(mbox);
+    }
+}
+
+static void power_button_cb(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    if (s_sleep_timer) return;
+
+    lv_obj_t *mbox = lv_msgbox_create(NULL);
+    if (!mbox) return;
+
+    lv_obj_set_size(mbox, 300, 150);
+    lv_msgbox_add_title(mbox, "Apagar reloj");
+    lv_msgbox_add_text(mbox, "Entrar en deep sleep?");
+
+    lv_obj_t *confirm = lv_msgbox_add_footer_button(mbox, "Apagar");
+    lv_obj_add_event_cb(confirm, power_dialog_cb, LV_EVENT_CLICKED,
+                        (void *)&POWER_CONFIRM_TOKEN);
+
+    lv_obj_t *cancel = lv_msgbox_add_footer_button(mbox, "Cancelar");
+    lv_obj_add_event_cb(cancel, power_dialog_cb, LV_EVENT_CLICKED, NULL);
 }
 
 static void save_time_cb(lv_event_t *e)
@@ -294,6 +341,7 @@ static void build_tab_hora(lv_obj_t *tab)
     lv_obj_set_flex_align(bar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    make_button(bar, "Apagar", power_button_cb);
     make_button(bar, "Guardar", save_time_cb);
     make_button(bar, "Cancelar", close_cb);
 }

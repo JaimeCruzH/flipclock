@@ -239,6 +239,15 @@ esp_err_t bsp_display_backlight_on(void)
     return bsp_display_brightness_set(100);
 }
 
+esp_err_t bsp_display_prepare_sleep(void)
+{
+    esp_err_t err = bsp_display_backlight_off();
+    if (err != ESP_OK) return err;
+    if (panel_handle == NULL) return ESP_ERR_INVALID_STATE;
+
+    return esp_lcd_panel_disp_on_off(panel_handle, false);
+}
+
 static bool bsp_display_sync_cb(void *arg)
 {
     assert(arg);

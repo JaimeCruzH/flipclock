@@ -35,6 +35,7 @@ void pomodoro_get_state(pomodoro_state_t *out);
 void pomodoro_start_pause(void);
 void pomodoro_reset(void);
 void pomodoro_advance(void);
+void pomodoro_prepare_sleep(void);
 
 const char *pomodoro_phase_name(pomodoro_phase_t phase);
 

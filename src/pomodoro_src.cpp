@@ -205,6 +205,12 @@ void pomodoro_advance(void)
     save_session();
 }
 
+void pomodoro_prepare_sleep(void)
+{
+    update_remaining(millis());
+    save_session();
+}
+
 const char *pomodoro_phase_name(pomodoro_phase_t phase)
 {
     switch (phase) {
