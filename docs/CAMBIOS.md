@@ -50,6 +50,15 @@ ciclo de LVGL y dejaba congelados tanto el reloj como la pulsacion larga.
 
 La fuente Tiny TTF y LVGL 9.5.0 se conservan; no eran la causa de este fallo.
 
+## Validación funcional del arreglo
+
+Validada en la placa el **2026-09-08** con el firmware de producción:
+
+- los minutos avanzan mientras el modo Noche permanece activo;
+- mantener cualquier zona de la pantalla durante 2 segundos vuelve al reloj
+  normal;
+- no fue necesario pulsar `RESET` para salir del modo Noche.
+
 ## Reparacion del modo Noche
 
 - `platformio.ini`: `esp32-s3-display`, que es el perfil de produccion, ahora

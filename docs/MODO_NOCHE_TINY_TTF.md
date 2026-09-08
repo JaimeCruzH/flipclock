@@ -1,6 +1,7 @@
 # Modo noche y Tiny TTF
 
-Registro de la implementación y de las pruebas realizadas el **2026-09-04**.
+Registro de la implementación y de las pruebas iniciales realizadas el **2026-09-04**.
+Validación funcional del arreglo: **2026-09-08**.
 
 ## Resultado adoptado
 
@@ -120,6 +121,15 @@ respaldo bitmap y el comando respondió correctamente.
 Los símbolos `lv_tiny_ttf` y `night_font_ttf` están presentes en el ELF de
 producción. La confirmación visual final debe hacerse mirando la pantalla al
 activar Noche; la consola no captura píxeles.
+
+## Validación funcional posterior
+
+En la placa con el firmware corregido se confirmó que:
+
+- el reloj nocturno cambia al avanzar los minutos;
+- mantener cualquier zona de la pantalla durante 2 segundos vuelve al modo
+  normal;
+- el `RESET` físico ya no es necesario para salir del modo Noche.
 
 ## Archivos involucrados
 
