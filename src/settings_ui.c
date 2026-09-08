@@ -57,9 +57,8 @@ static const char *OPT_NIGHT_BRIGHTNESS =
 /* En este panel, 1 mm son aproximadamente 6,5 px. */
 #define POMO_MM_PX 7
 
-static void close_cb(lv_event_t *e)
+static void stop_battery_ui(void)
 {
-    LV_UNUSED(e);
     if (s_battery_timer) {
         lv_timer_delete(s_battery_timer);
         s_battery_timer = NULL;
@@ -67,6 +66,12 @@ static void close_cb(lv_event_t *e)
     s_lbl_battery = NULL;
     s_lbl_battery_trend = NULL;
     s_lbl_battery_runtime = NULL;
+}
+
+static void close_cb(lv_event_t *e)
+{
+    LV_UNUSED(e);
+    stop_battery_ui();
     bsp_display_brightness_set(prefs_get_brightness());   /* ya sin el minimo de UI */
     if (s_origin == SETTINGS_FROM_POMODORO) pomodoro_ui_show();
     else                                    clock_ui_show();
@@ -419,6 +424,7 @@ static void flip_cb(lv_event_t *e)
 static void night_cb(lv_event_t *e)
 {
     LV_UNUSED(e);
+    stop_battery_ui();
     lv_obj_delete_async(s_scr);
     s_scr = NULL;
     night_ui_show();

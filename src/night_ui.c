@@ -34,6 +34,7 @@
 #endif
 static lv_obj_t  *s_screen;
 static lv_obj_t  *s_time;
+static lv_timer_t *s_tick_timer;
 static lv_timer_t *s_exit_timer;
 static int        s_last_minute = -1;
 static int        s_restore_brightness;
@@ -148,7 +149,11 @@ static void touch_cb(lv_event_t *e)
     if (code == LV_EVENT_PRESSED) {
         cancel_exit_timer();
         s_exit_timer = lv_timer_create(exit_to_clock_cb, NIGHT_EXIT_HOLD_MS, NULL);
-        lv_timer_set_repeat_count(s_exit_timer, 1);
+        if (s_exit_timer) {
+            lv_timer_set_repeat_count(s_exit_timer, 1);
+        } else {
+            ESP_LOGE("NIGHT", "No se pudo crear el temporizador de salida");
+        }
     } else if (code == LV_EVENT_RELEASED) {
         cancel_exit_timer();
     }
@@ -191,7 +196,10 @@ static void create_screen(void)
     lv_label_set_text(s_time, "00:00");
     lv_obj_align(s_time, LV_ALIGN_CENTER, 0, 0);
 
-    lv_timer_create(tick_cb, NIGHT_TICK_MS, NULL);
+    s_tick_timer = lv_timer_create(tick_cb, NIGHT_TICK_MS, NULL);
+    if (!s_tick_timer) {
+        ESP_LOGE("NIGHT", "No se pudo crear el temporizador del reloj");
+    }
 
     lv_indev_t *indev = bsp_display_get_input_dev();
     if (indev) {

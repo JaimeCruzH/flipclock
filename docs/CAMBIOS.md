@@ -1,6 +1,6 @@
 # Registro de cambios, rutas y dependencias
 
-Ultima actualizacion: **2026-09-04**. Este documento resume la integracion de
+Ultima actualizacion: **2026-09-08**. Este documento resume la integracion de
 bateria, la reparacion del modo Noche, el apagado por deep sleep y la limpieza
 documental realizada en el repositorio.
 
@@ -35,6 +35,20 @@ Aplicados en los commits `bfb5ac3` y `a0a9524`:
 
 La bateria se muestrea en una tarea independiente cada 10 minutos. No se
 modifico la logica de la pantalla Noche para incorporar esta funcion.
+
+## Correccion del ciclo de vida al entrar en Noche
+
+La pantalla de Ajustes crea un temporizador LVGL para refrescar las etiquetas de
+bateria. El boton **Noche** eliminaba Ajustes sin detener ese temporizador, que
+despues intentaba escribir sobre etiquetas ya liberadas. Esto podia detener el
+ciclo de LVGL y dejaba congelados tanto el reloj como la pulsacion larga.
+
+- `src/settings_ui.c`: limpieza comun del temporizador y de los punteros de
+  bateria antes de salir de Ajustes, incluida la ruta **Noche**.
+- `src/night_ui.c`: comprobacion de las asignaciones de los temporizadores de
+  avance de hora y salida por pulsacion larga.
+
+La fuente Tiny TTF y LVGL 9.5.0 se conservan; no eran la causa de este fallo.
 
 ## Reparacion del modo Noche
 
