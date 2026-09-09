@@ -2,6 +2,7 @@
 
 Registro de la implementación y de las pruebas iniciales realizadas el **2026-09-04**.
 Validación funcional del arreglo: **2026-09-08**.
+Corrección del primer renderizado y carga del firmware: **2026-09-09**.
 
 ## Resultado adoptado
 
@@ -48,6 +49,21 @@ Al entrar en Noche:
 Para salir, se mantiene pulsada cualquier zona durante **2.000 ms**. Un toque
 corto no sale. Al salir se restaura el brillo normal y se espera la liberación
 del táctil para evitar un clic accidental en el reloj.
+
+## Corrección del primer renderizado
+
+Tiny TTF crea las imágenes de los glifos durante el primer dibujo. En una
+entrada ocasional al modo Noche, el dibujo podía omitir los glifos de los
+minutos aunque las horas ya estuvieran visibles. La pantalla no se volvía a
+invalidar hasta el siguiente cambio de minuto porque `tick_cb` evita actualizar
+el texto dentro del mismo minuto.
+
+`src/night_ui.c` programa ahora un temporizador de una sola ejecución a **100
+ms** después de cargar la pantalla. Si Noche sigue activa, el temporizador
+invalida la etiqueta `HH:MM` y fuerza un segundo dibujo. Esto deja terminar la
+eliminación asíncrona de la pantalla de Ajustes y permite que Tiny TTF reintente
+la creación de los glifos faltantes. El cambio no altera la fuente, la hora ni
+la pantalla normal.
 
 ## Cálculo del tamaño TTF
 
@@ -104,10 +120,10 @@ estática y 4.319.010 B de flash de aplicación.
 
 ```powershell
 $projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
-& $projectPython -m platformio run -e esp32-s3-night-bench
-
 $env:PYTHONIOENCODING='utf-8'
 $env:PYTHONUTF8='1'
+& $projectPython -m platformio run -e esp32-s3-night-bench
+
 & $projectPython -m platformio run -e esp32-s3-display -t upload --upload-port COM8
 ```
 
@@ -130,6 +146,10 @@ En la placa con el firmware corregido se confirmó que:
 - mantener cualquier zona de la pantalla durante 2 segundos vuelve al modo
   normal;
 - el `RESET` físico ya no es necesario para salir del modo Noche.
+
+El firmware que incluye el reintento del primer renderizado se compiló y se
+cargó correctamente en `COM8` el **2026-09-09**. Falta repetir la prueba visual
+varias veces para confirmar que los minutos aparecen siempre en la entrada.
 
 ## Archivos involucrados
 

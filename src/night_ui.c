@@ -23,6 +23,7 @@
 
 #define NIGHT_EXIT_HOLD_MS       2000
 #define NIGHT_TICK_MS            500
+#define NIGHT_INITIAL_REFRESH_MS 100
 #if defined(NIGHT_TTF_BENCHMARK)
 #define NIGHT_BENCH_DURATION_MS  10000
 #endif
@@ -70,6 +71,14 @@ static void update_time(void)
     s_last_minute = t.tm_hour * 60 + t.tm_min;
     snprintf(buf, sizeof(buf), "%02d:%02d", t.tm_hour, t.tm_min);
     lv_label_set_text(s_time, buf);
+}
+
+static void initial_refresh_cb(lv_timer_t *timer)
+{
+    LV_UNUSED(timer);
+
+    if (lv_screen_active() != s_screen || !s_time) return;
+    lv_obj_invalidate(s_time);
 }
 
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
@@ -217,6 +226,18 @@ void night_ui_show(void)
     s_last_minute = -1;
     update_time();
     lv_screen_load(s_screen);
+#if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
+    if (entering && s_ttf_font) {
+        lv_timer_t *refresh_timer = lv_timer_create(initial_refresh_cb,
+                                                    NIGHT_INITIAL_REFRESH_MS,
+                                                    NULL);
+        if (refresh_timer) {
+            lv_timer_set_repeat_count(refresh_timer, 1);
+        } else {
+            ESP_LOGE("NIGHT", "No se pudo crear el reintento de render inicial");
+        }
+    }
+#endif
     bsp_display_brightness_set(prefs_get_night_brightness());
 }
 

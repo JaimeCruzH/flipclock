@@ -1,6 +1,6 @@
 # Registro de cambios, rutas y dependencias
 
-Ultima actualizacion: **2026-09-08**. Este documento resume la integracion de
+Ultima actualizacion: **2026-09-09**. Este documento resume la integracion de
 bateria, la reparacion del modo Noche, el apagado por deep sleep y la limpieza
 documental realizada en el repositorio.
 
@@ -50,6 +50,26 @@ ciclo de LVGL y dejaba congelados tanto el reloj como la pulsacion larga.
 
 La fuente Tiny TTF y LVGL 9.5.0 se conservan; no eran la causa de este fallo.
 
+## Correccion del primer renderizado del modo Noche
+
+Se detecto que, algunas veces, el modo Noche mostraba las horas pero no los
+minutos hasta el siguiente cambio de minuto. Tiny TTF genera los glifos bajo
+demanda durante el dibujo; si un glifo no estaba disponible en ese primer
+renderizado, LVGL lo omitía. Como `tick_cb` solo invalida la etiqueta cuando
+cambia el minuto, el texto incompleto podía permanecer visible durante un
+minuto.
+
+- `src/night_ui.c`: al entrar en Noche se programa un temporizador de una sola
+  ejecución a 100 ms. Si la pantalla sigue activa, invalida la etiqueta para
+  repetir el dibujo y permitir que Tiny TTF cree los glifos faltantes después
+  de que termine la eliminación asíncrona de Ajustes.
+- El reintento no modifica la hora, la lógica de actualización por minuto ni
+  el reloj normal, que usa sprites bitmap.
+
+La corrección se compiló y se cargó en la placa de producción `COM8` el
+**2026-09-09**. La confirmación visual debe hacerse activando Noche varias
+veces desde Ajustes.
+
 ## Validación funcional del arreglo
 
 Validada en la placa el **2026-09-08** con el firmware de producción:
@@ -98,6 +118,8 @@ Las rutas del repositorio son relativas a su raiz:
 - `tools/setup_lvgl.py`: recrea `vendor/lvgl9/`.
 - `tools/gen_assets.py`: regenera los sprites.
 - `docs/`: documentacion y recursos visuales versionados.
+- `AGENTS.md`: reglas operativas del proyecto, incluida la salida UTF-8 y la
+  comprobacion obligatoria de `SUCCESS` al cargar firmware.
 - `.pio/`: salida local de compilacion; esta ignorada por Git.
 
 En PowerShell, las rutas auxiliares locales se derivan sin fijar una carpeta de
@@ -143,6 +165,8 @@ del framework impediria compilar.
 ## Verificacion realizada
 
 ```powershell
+$env:PYTHONIOENCODING = 'utf-8'
+$env:PYTHONUTF8 = '1'
 & $projectPython -m platformio pkg list -e esp32-s3-display
 & $projectPython -m platformio run -e esp32-s3-display
 & $projectPython -m platformio run -e esp32-s3-night-bench
