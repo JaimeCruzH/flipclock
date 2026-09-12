@@ -50,20 +50,20 @@ Para salir, se mantiene pulsada cualquier zona durante **2.000 ms**. Un toque
 corto no sale. Al salir se restaura el brillo normal y se espera la liberación
 del táctil para evitar un clic accidental en el reloj.
 
-## Corrección del primer renderizado
+## Corrección del renderizado en entrada y cambio de minuto
 
-Tiny TTF crea las imágenes de los glifos durante el primer dibujo. En una
-entrada ocasional al modo Noche, el dibujo podía omitir los glifos de los
-minutos aunque las horas ya estuvieran visibles. La pantalla no se volvía a
-invalidar hasta el siguiente cambio de minuto porque `tick_cb` evita actualizar
-el texto dentro del mismo minuto.
+Tiny TTF crea las imágenes de los glifos durante el dibujo. En una entrada o
+un cambio de minuto ocasional al modo Noche, el dibujo podía omitir los glifos
+de los minutos aunque las horas ya estuvieran visibles. El arreglo anterior
+solo cubría la entrada; por eso el mismo síntoma podía repetirse al comenzar
+otro minuto.
 
 `src/night_ui.c` programa ahora un temporizador de una sola ejecución a **100
-ms** después de cargar la pantalla. Si Noche sigue activa, el temporizador
-invalida la etiqueta `HH:MM` y fuerza un segundo dibujo. Esto deja terminar la
-eliminación asíncrona de la pantalla de Ajustes y permite que Tiny TTF reintente
-la creación de los glifos faltantes. El cambio no altera la fuente, la hora ni
-la pantalla normal.
+ms** al cargar la pantalla y después de cada cambio de minuto. Si Noche sigue
+activa, el temporizador invalida la etiqueta `HH:MM` y fuerza un segundo dibujo.
+Esto deja terminar la eliminación asíncrona de la pantalla de Ajustes y permite
+que Tiny TTF reintente la creación de los glifos faltantes en ambos casos. El
+cambio no altera la fuente, la hora ni la pantalla normal.
 
 ## Cálculo del tamaño TTF
 
@@ -147,9 +147,10 @@ En la placa con el firmware corregido se confirmó que:
   normal;
 - el `RESET` físico ya no es necesario para salir del modo Noche.
 
-El firmware que incluye el reintento del primer renderizado se compiló y se
-cargó correctamente en `COM8` el **2026-09-09**. Falta repetir la prueba visual
-varias veces para confirmar que los minutos aparecen siempre en la entrada.
+El firmware que incluye el reintento en la entrada y en cada cambio de minuto
+se compiló y se cargó correctamente en `COM8` el **2026-09-12**. Falta repetir
+la prueba visual durante varios cambios de minuto para confirmar que los
+minutos aparecen siempre.
 
 ## Archivos involucrados
 

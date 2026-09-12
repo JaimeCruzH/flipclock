@@ -23,7 +23,7 @@
 
 #define NIGHT_EXIT_HOLD_MS       2000
 #define NIGHT_TICK_MS            500
-#define NIGHT_INITIAL_REFRESH_MS 100
+#define NIGHT_REFRESH_RETRY_MS   100
 #if defined(NIGHT_TTF_BENCHMARK)
 #define NIGHT_BENCH_DURATION_MS  10000
 #endif
@@ -43,6 +43,7 @@ static int        s_restore_brightness;
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
 static lv_font_t *s_ttf_font;
 static int32_t   s_ttf_font_size;
+static lv_timer_t *s_refresh_timer;
 #endif
 
 #if defined(NIGHT_TTF_BENCHMARK)
@@ -73,13 +74,29 @@ static void update_time(void)
     lv_label_set_text(s_time, buf);
 }
 
-static void initial_refresh_cb(lv_timer_t *timer)
+#if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
+static void refresh_retry_cb(lv_timer_t *timer)
 {
-    LV_UNUSED(timer);
+    if (timer == s_refresh_timer) s_refresh_timer = NULL;
 
     if (lv_screen_active() != s_screen || !s_time) return;
     lv_obj_invalidate(s_time);
 }
+
+static void schedule_refresh_retry(void)
+{
+    if (!s_ttf_font || s_refresh_timer) return;
+
+    s_refresh_timer = lv_timer_create(refresh_retry_cb,
+                                      NIGHT_REFRESH_RETRY_MS, NULL);
+    if (!s_refresh_timer) {
+        ESP_LOGE("NIGHT", "No se pudo crear el reintento de render nocturno");
+        return;
+    }
+
+    lv_timer_set_repeat_count(s_refresh_timer, 1);
+}
+#endif
 
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
 static bool night_ttf_fits(const lv_font_t *font)
@@ -134,6 +151,9 @@ static void tick_cb(lv_timer_t *timer)
     if (minute == s_last_minute) return;
 
     update_time();
+#if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
+    schedule_refresh_retry();
+#endif
 }
 
 static void exit_to_clock_cb(lv_timer_t *timer)
@@ -227,16 +247,7 @@ void night_ui_show(void)
     update_time();
     lv_screen_load(s_screen);
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
-    if (entering && s_ttf_font) {
-        lv_timer_t *refresh_timer = lv_timer_create(initial_refresh_cb,
-                                                    NIGHT_INITIAL_REFRESH_MS,
-                                                    NULL);
-        if (refresh_timer) {
-            lv_timer_set_repeat_count(refresh_timer, 1);
-        } else {
-            ESP_LOGE("NIGHT", "No se pudo crear el reintento de render inicial");
-        }
-    }
+    if (entering) schedule_refresh_retry();
 #endif
     bsp_display_brightness_set(prefs_get_night_brightness());
 }

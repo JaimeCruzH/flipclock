@@ -50,7 +50,7 @@ ciclo de LVGL y dejaba congelados tanto el reloj como la pulsacion larga.
 
 La fuente Tiny TTF y LVGL 9.5.0 se conservan; no eran la causa de este fallo.
 
-## Correccion del primer renderizado del modo Noche
+## Correccion del renderizado del modo Noche
 
 Se detecto que, algunas veces, el modo Noche mostraba las horas pero no los
 minutos hasta el siguiente cambio de minuto. Tiny TTF genera los glifos bajo
@@ -59,16 +59,19 @@ renderizado, LVGL lo omitía. Como `tick_cb` solo invalida la etiqueta cuando
 cambia el minuto, el texto incompleto podía permanecer visible durante un
 minuto.
 
-- `src/night_ui.c`: al entrar en Noche se programa un temporizador de una sola
-  ejecución a 100 ms. Si la pantalla sigue activa, invalida la etiqueta para
-  repetir el dibujo y permitir que Tiny TTF cree los glifos faltantes después
-  de que termine la eliminación asíncrona de Ajustes.
+- `src/night_ui.c`: al entrar en Noche y después de cada cambio de minuto se
+  programa un temporizador de una sola ejecución a 100 ms. Si la pantalla sigue
+  activa, invalida la etiqueta para repetir el dibujo y permitir que Tiny TTF
+  cree los glifos faltantes.
+- El reintento de entrada también deja terminar la eliminación asíncrona de
+  Ajustes. El reintento por minuto cubre el mismo fallo cuando la entrada de un
+  nuevo minuto produce un dibujo incompleto.
 - El reintento no modifica la hora, la lógica de actualización por minuto ni
   el reloj normal, que usa sprites bitmap.
 
 La corrección se compiló y se cargó en la placa de producción `COM8` el
-**2026-09-09**. La confirmación visual debe hacerse activando Noche varias
-veces desde Ajustes.
+**2026-09-12**. La confirmación visual debe hacerse observando varios cambios
+de minuto consecutivos en Noche.
 
 ## Validación funcional del arreglo
 
