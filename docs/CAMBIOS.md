@@ -59,6 +59,14 @@ renderizado, LVGL lo omitía. Como `tick_cb` solo invalida la etiqueta cuando
 cambia el minuto, el texto incompleto podía permanecer visible durante un
 minuto.
 
+La corrección inicial agrego un reintento al entrar y luego se amplió a cada
+cambio de minuto, pero el fallo también se repitió en esa segunda pasada. La
+ruta que permitía el fallo era la caché dinámica de bitmaps de Tiny TTF:
+`lv_tiny_ttf` puede devolver un bitmap nulo cuando no puede adquirir o crear
+una entrada, y el dibujante omite ese glifo. El digito `4` no tiene una ruta
+especial; podia ser simplemente el primer glifo que necesitaba una reserva
+nueva en los casos observados.
+
 - `src/night_ui.c`: al entrar en Noche y después de cada cambio de minuto se
   programa un temporizador de una sola ejecución a 100 ms. Si la pantalla sigue
   activa, invalida la etiqueta para repetir el dibujo y permitir que Tiny TTF
@@ -66,11 +74,14 @@ minuto.
 - El reintento de entrada también deja terminar la eliminación asíncrona de
   Ajustes. El reintento por minuto cubre el mismo fallo cuando la entrada de un
   nuevo minuto produce un dibujo incompleto.
+- `src/night_ui.c`: `NIGHT_TTF_CACHE_COUNT` queda en `0` en producción. Tiny TTF
+  rasteriza cada bitmap directamente y lo libera al terminar el dibujo, sin
+  retener las reservas A8 de los glifos entre minutos.
 - El reintento no modifica la hora, la lógica de actualización por minuto ni
   el reloj normal, que usa sprites bitmap.
 
 La corrección se compiló y se cargó en la placa de producción `COM8` el
-**2026-09-12**. La confirmación visual debe hacerse observando varios cambios
+**2026-09-13**. La confirmación visual debe hacerse observando varios cambios
 de minuto consecutivos en Noche.
 
 ## Validación funcional del arreglo

@@ -29,7 +29,7 @@
 #endif
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
 #define NIGHT_TTF_MAX_FONT_SIZE  512
-#define NIGHT_TTF_CACHE_COUNT    16
+#define NIGHT_TTF_CACHE_COUNT    0  /* rasterizar cada glifo; no retener bitmaps A8 */
 #define NIGHT_SCREEN_WIDTH       480
 #define NIGHT_SCREEN_HEIGHT      320
 #endif

@@ -56,7 +56,8 @@ Tiny TTF crea las imágenes de los glifos durante el dibujo. En una entrada o
 un cambio de minuto ocasional al modo Noche, el dibujo podía omitir los glifos
 de los minutos aunque las horas ya estuvieran visibles. El arreglo anterior
 solo cubría la entrada; por eso el mismo síntoma podía repetirse al comenzar
-otro minuto.
+otro minuto. La segunda versión también reintentaba después del cambio, pero
+el síntoma siguió apareciendo.
 
 `src/night_ui.c` programa ahora un temporizador de una sola ejecución a **100
 ms** al cargar la pantalla y después de cada cambio de minuto. Si Noche sigue
@@ -64,6 +65,13 @@ activa, el temporizador invalida la etiqueta `HH:MM` y fuerza un segundo dibujo.
 Esto deja terminar la eliminación asíncrona de la pantalla de Ajustes y permite
 que Tiny TTF reintente la creación de los glifos faltantes en ambos casos. El
 cambio no altera la fuente, la hora ni la pantalla normal.
+
+La causa que quedaba sin cubrir era la caché dinámica de Tiny TTF. En esta
+versión `NIGHT_TTF_CACHE_COUNT` es **0**: cada bitmap A8 se rasteriza para el
+dibujo actual y se libera al finalizar. Así los cambios de minuto no dependen
+de que una entrada persistente de caché pueda reservarse o conservarse. El
+dígito `4` no tiene un tratamiento distinto; su coincidencia en varios casos
+se debía a que podía ser el primer glifo nuevo de ese minuto.
 
 ## Cálculo del tamaño TTF
 
@@ -147,10 +155,10 @@ En la placa con el firmware corregido se confirmó que:
   normal;
 - el `RESET` físico ya no es necesario para salir del modo Noche.
 
-El firmware que incluye el reintento en la entrada y en cada cambio de minuto
-se compiló y se cargó correctamente en `COM8` el **2026-09-12**. Falta repetir
-la prueba visual durante varios cambios de minuto para confirmar que los
-minutos aparecen siempre.
+El firmware que desactiva la caché dinámica y conserva el reintento en la
+entrada y en cada cambio de minuto se compiló y se cargó correctamente en
+`COM8` el **2026-09-13**. Falta repetir la prueba visual durante varios cambios
+de minuto para confirmar que los minutos aparecen siempre.
 
 ## Archivos involucrados
 
