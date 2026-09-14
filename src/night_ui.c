@@ -29,7 +29,7 @@
 #endif
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
 #define NIGHT_TTF_MAX_FONT_SIZE  512
-#define NIGHT_TTF_CACHE_COUNT    0  /* rasterizar cada glifo; no retener bitmaps A8 */
+#define NIGHT_TTF_CACHE_COUNT    11 /* 10 digitos y los dos puntos del reloj */
 #define NIGHT_SCREEN_WIDTH       480
 #define NIGHT_SCREEN_HEIGHT      320
 #endif
@@ -39,6 +39,7 @@ static lv_timer_t *s_tick_timer;
 static lv_timer_t *s_exit_timer;
 static int        s_last_minute = -1;
 static int        s_restore_brightness;
+static char       s_time_text[6] = "00:00";
 
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
 static lv_font_t *s_ttf_font;
@@ -66,15 +67,32 @@ static void cancel_exit_timer(void)
 static void update_time(void)
 {
     struct tm t;
-    char buf[6];
 
     time_src_now(&t);
     s_last_minute = t.tm_hour * 60 + t.tm_min;
-    snprintf(buf, sizeof(buf), "%02d:%02d", t.tm_hour, t.tm_min);
-    lv_label_set_text(s_time, buf);
+    snprintf(s_time_text, sizeof(s_time_text), "%02d:%02d", t.tm_hour, t.tm_min);
+    lv_label_set_text_static(s_time, s_time_text);
 }
 
 #if defined(NIGHT_TTF_USE) && NIGHT_TTF_USE
+static void night_ttf_warm_cache(lv_font_t *font)
+{
+    static const char clock_glyphs[] = "0123456789:";
+
+    for (size_t i = 0; i < sizeof(clock_glyphs) - 1; i++) {
+        lv_font_glyph_dsc_t glyph;
+        if (!lv_font_get_glyph_dsc(font, &glyph, (uint8_t)clock_glyphs[i], 0)) {
+            ESP_LOGE("NIGHT", "No se pudo preparar el glifo '%c'", clock_glyphs[i]);
+            continue;
+        }
+
+        if (!lv_font_get_glyph_bitmap(&glyph, NULL)) {
+            ESP_LOGE("NIGHT", "No se pudo reservar el bitmap del glifo '%c'", clock_glyphs[i]);
+        }
+        lv_font_glyph_release_draw_data(&glyph);
+    }
+}
+
 static void refresh_retry_cb(lv_timer_t *timer)
 {
     if (timer == s_refresh_timer) s_refresh_timer = NULL;
@@ -207,6 +225,7 @@ static void create_screen(void)
         NIGHT_TTF_CACHE_COUNT);
     if (s_ttf_font) {
         s_ttf_font_size = night_ttf_find_max_size(s_ttf_font);
+        night_ttf_warm_cache(s_ttf_font);
         lv_obj_set_width(s_time, NIGHT_SCREEN_WIDTH);
         lv_obj_set_height(s_time, lv_font_get_line_height(s_ttf_font));
         lv_obj_set_style_text_font(s_time, s_ttf_font, 0);
@@ -222,7 +241,7 @@ static void create_screen(void)
 #endif
     lv_obj_set_style_text_color(s_time, lv_color_white(), 0);
     lv_obj_set_style_text_align(s_time, LV_TEXT_ALIGN_CENTER, 0);
-    lv_label_set_text(s_time, "00:00");
+    lv_label_set_text_static(s_time, s_time_text);
     lv_obj_align(s_time, LV_ALIGN_CENTER, 0, 0);
 
     s_tick_timer = lv_timer_create(tick_cb, NIGHT_TICK_MS, NULL);

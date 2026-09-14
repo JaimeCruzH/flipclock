@@ -3,6 +3,7 @@
 Registro de la implementación y de las pruebas iniciales realizadas el **2026-09-04**.
 Validación funcional del arreglo: **2026-09-08**.
 Corrección del primer renderizado y carga del firmware: **2026-09-09**.
+Corrección de reservas de glifos y carga del firmware: **2026-09-14**.
 
 ## Resultado adoptado
 
@@ -66,12 +67,19 @@ Esto deja terminar la eliminación asíncrona de la pantalla de Ajustes y permit
 que Tiny TTF reintente la creación de los glifos faltantes en ambos casos. El
 cambio no altera la fuente, la hora ni la pantalla normal.
 
-La causa que quedaba sin cubrir era la caché dinámica de Tiny TTF. En esta
-versión `NIGHT_TTF_CACHE_COUNT` es **0**: cada bitmap A8 se rasteriza para el
-dibujo actual y se libera al finalizar. Así los cambios de minuto no dependen
-de que una entrada persistente de caché pueda reservarse o conservarse. El
-dígito `4` no tiene un tratamiento distinto; su coincidencia en varios casos
-se debía a que podía ser el primer glifo nuevo de ese minuto.
+La causa que quedaba sin cubrir eran las reservas dinámicas durante el dibujo.
+Con `NIGHT_TTF_CACHE_COUNT` en **0**, cada bitmap A8 se creaba y destruía para
+cada glifo. Una reserva fallida hacía que LVGL omitiera el glifo y, como los
+minutos se dibujan después de las horas, dejaba visible `HH:`. El dígito `4`
+no tiene un tratamiento distinto; su coincidencia en varios casos se explica
+por el orden en que se dibujan los caracteres.
+
+La corrección actual fija `NIGHT_TTF_CACHE_COUNT` en **11**, precarga después
+del cálculo del tamaño final los caracteres `0123456789:` y conserva sus
+bitmaps para todo el uso del modo Noche. Además, `HH:MM` se actualiza en un
+buffer estático con `lv_label_set_text_static`, eliminando la reserva de texto
+en cada cambio de minuto. El reintento de 100 ms se conserva como protección,
+pero ya no es el mecanismo que crea los glifos faltantes.
 
 ## Cálculo del tamaño TTF
 
@@ -96,11 +104,12 @@ flash es el de la región de aplicación reportada por PlatformIO.
 
 | Perfil | RAM estática | Flash | Observación |
 |---|---:|---:|---|
-| `esp32-s3-display` | 51.616 B (15,8%) | 4.319.010 B (65,9%) | Producción con Tiny TTF |
-| `esp32-s3-night-bench` | 51.640 B (15,8%) | 4.319.498 B (65,9%) | Tiny TTF e instrumentación |
+| `esp32-s3-display` | 51.696 B (15,8%) | 4.327.854 B (66,0%) | Producción con Tiny TTF y caché precargada |
+| `esp32-s3-night-bench` | 51.720 B (15,8%) | 4.328.322 B (66,0%) | Tiny TTF e instrumentación |
 
-La RAM estática del enlazado no mide toda la caché dinámica de glifos que Tiny
-TTF puede reservar durante el uso. El perfil de diagnóstico agrega la
+La RAM estática del enlazado no mide los bitmaps que Tiny TTF reserva en la
+caché durante la creación de Noche. La caché ahora contiene solo los 11
+caracteres que puede mostrar este reloj. El perfil de diagnóstico agrega la
 instrumentación del benchmark sobre la misma configuración de producción.
 
 La variante bitmap es más rápida y predecible porque sus glifos ya están
@@ -109,8 +118,8 @@ produce bordes borrosos o pixelados. Tiny TTF necesita más trabajo al crear y
 cachear glifos, pero permite rasterizar directamente al tamaño nativo de 171 px.
 
 Una fuente bitmap nueva, generada nativamente a 171 px y limitada a los
-caracteres `0..9` y `:`, sería otra alternativa posible. No forma parte de la
-decisión adoptada.
+caracteres `0..9` y `:`, sigue siendo otra alternativa posible. No forma parte
+de la decisión adoptada.
 
 ## Pruebas realizadas
 
@@ -118,11 +127,13 @@ decisión adoptada.
 
 ```powershell
 $projectPython = Join-Path $env:USERPROFILE '.platformio\penv\Scripts\python.exe'
+$env:PYTHONIOENCODING='utf-8'
+$env:PYTHONUTF8=1
 & $projectPython -m platformio run -e esp32-s3-display
 ```
 
-Resultado verificado: código `0`, `firmware.elf` generado, 51.616 B de RAM
-estática y 4.319.010 B de flash de aplicación.
+Resultado verificado: código `0`, `firmware.elf` generado, 51.696 B de RAM
+estática y 4.327.854 B de flash de aplicación.
 
 ### Diagnóstico y carga de producción
 
@@ -155,10 +166,11 @@ En la placa con el firmware corregido se confirmó que:
   normal;
 - el `RESET` físico ya no es necesario para salir del modo Noche.
 
-El firmware que desactiva la caché dinámica y conserva el reintento en la
-entrada y en cada cambio de minuto se compiló y se cargó correctamente en
-`COM8` el **2026-09-13**. Falta repetir la prueba visual durante varios cambios
-de minuto para confirmar que los minutos aparecen siempre.
+El firmware que precarga los 11 glifos, usa texto estático y conserva el
+reintento en la entrada y en cada cambio de minuto se compiló y se cargó
+correctamente en `COM8` el **2026-09-14**. Falta repetir la prueba visual
+durante varios cambios de minuto para confirmar que los minutos aparecen
+siempre.
 
 ## Archivos involucrados
 

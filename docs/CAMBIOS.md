@@ -1,6 +1,6 @@
 # Registro de cambios, rutas y dependencias
 
-Ultima actualizacion: **2026-09-09**. Este documento resume la integracion de
+Ultima actualizacion: **2026-09-14**. Este documento resume la integracion de
 bateria, la reparacion del modo Noche, el apagado por deep sleep y la limpieza
 documental realizada en el repositorio.
 
@@ -59,13 +59,12 @@ renderizado, LVGL lo omitía. Como `tick_cb` solo invalida la etiqueta cuando
 cambia el minuto, el texto incompleto podía permanecer visible durante un
 minuto.
 
-La corrección inicial agrego un reintento al entrar y luego se amplió a cada
+La corrección inicial agregó un reintento al entrar y luego se amplió a cada
 cambio de minuto, pero el fallo también se repitió en esa segunda pasada. La
-ruta que permitía el fallo era la caché dinámica de bitmaps de Tiny TTF:
-`lv_tiny_ttf` puede devolver un bitmap nulo cuando no puede adquirir o crear
-una entrada, y el dibujante omite ese glifo. El digito `4` no tiene una ruta
-especial; podia ser simplemente el primer glifo que necesitaba una reserva
-nueva en los casos observados.
+causa alternativa quedó en las reservas durante el dibujo: con la caché en
+`0`, Tiny TTF seguía creando y destruyendo un bitmap A8 por cada glifo. Si una
+reserva fallaba, LVGL omitía ese glifo; como los minutos se dibujan después de
+las horas, el resultado era `HH:`. El dígito `4` no tiene una ruta especial.
 
 - `src/night_ui.c`: al entrar en Noche y después de cada cambio de minuto se
   programa un temporizador de una sola ejecución a 100 ms. Si la pantalla sigue
@@ -74,14 +73,17 @@ nueva en los casos observados.
 - El reintento de entrada también deja terminar la eliminación asíncrona de
   Ajustes. El reintento por minuto cubre el mismo fallo cuando la entrada de un
   nuevo minuto produce un dibujo incompleto.
-- `src/night_ui.c`: `NIGHT_TTF_CACHE_COUNT` queda en `0` en producción. Tiny TTF
-  rasteriza cada bitmap directamente y lo libera al terminar el dibujo, sin
-  retener las reservas A8 de los glifos entre minutos.
+- `src/night_ui.c`: `NIGHT_TTF_CACHE_COUNT` queda en `11`, uno por cada carácter
+  de `0123456789:`. Después de calcular el tamaño final se precargan los 11
+  bitmaps, de modo que un cambio de minuto no necesita crear glifos nuevos.
+- `src/night_ui.c`: el texto `HH:MM` usa un buffer estático y
+  `lv_label_set_text_static`, por lo que tampoco se reserva memoria al cambiar
+  de minuto.
 - El reintento no modifica la hora, la lógica de actualización por minuto ni
   el reloj normal, que usa sprites bitmap.
 
 La corrección se compiló y se cargó en la placa de producción `COM8` el
-**2026-09-13**. La confirmación visual debe hacerse observando varios cambios
+**2026-09-14**. La confirmación visual debe hacerse observando varios cambios
 de minuto consecutivos en Noche.
 
 ## Validación funcional del arreglo
